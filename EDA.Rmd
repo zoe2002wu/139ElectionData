@@ -55,6 +55,24 @@ The dataset provides separate files for each state, containing the probability o
 The dataset contains average polling data by candidate, date, and their adjusted percentage of being favored. We started out by exploring how many missing and non-missing data point there were for Harris and Trump. We then aggregated data over time, such that we are left with poll percentages for Harris/Trump per state. We take the mean to find the average poll percentage for Harris and Trump nationwide. We then take the standard deviation.
 
 ```{r}
+polling_data <- read.csv("data/polls_survey_data/538_data/polls_average_2024.csv")
+library(dplyr)
+library(tidyverse)
+
+```
+
+```{r}
+
+#isolate 2024 polling data (there are many rwos from 2020 in here with no values)
+polling2024 <- polling_data %>%
+  filter(cycle == 2024) %>%
+  #take out the pct_trend_adjusted column (it's NA everywhere)
+  select(- pct_trend_adjusted)
+
+```
+
+```{r}
+#categorical variables - checking for missing data
 ```
 
 **Dataset 3: Election Results**
