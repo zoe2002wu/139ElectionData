@@ -1,0 +1,50 @@
+---
+title: "Final Project EDA and Data Evaluation"
+author: "Your Name"
+date: "November 2024"
+output: html_document
+---
+
+### Question 3: Evaluating Data Quality
+
+This question encourages you to begin the exploratory data analysis (EDA) for your final project. By addressing potential data quality issues early, you can identify and rectify problems promptly. For each important variable in your dataset, assess its quality by creating a table that includes the following:
+
+- **Continuous variables**:
+  - The number of non-missing observations.
+  - The number of missing observations.
+  - Measures of central tendency (e.g., mean, median).
+  - Measures of variability (e.g., standard deviation, interquartile range [IQR]).
+
+- **Categorical variables**:
+  - The levels of the variable.
+  - For each level:
+    - The number of non-missing observations.
+    - The number of missing observations.
+
+### Answer: Comparing Predictive Performance of Betting Markets and Polls
+
+Our project aims to compare the predictive accuracy of betting markets and polls in forecasting the outcome of the 2024 U.S. presidential election by state. We use the following datasets:
+
+1. **Betting Market Data**  
+   - Sourced from a Kaggle dataset, this dataset scrapes Polymarket's 2024 election results by state and consolidates them into a CSV file ([source](https://www.kaggle.com/datasets/pbizil/polymarket-2024-us-election-state-data)).
+   
+2. **Poll Data**  
+   - Sourced from FiveThirtyEight, this dataset provides polling averages and raw data from the 2024 U.S. presidential election ([source](https://projects.fivethirtyeight.com/polls/president-general/2024/national/)).
+   
+3. **Actual Election Results**  
+   - Sourced from CBS News, this dataset reports the official 2024 presidential election results ([source](https://www.cbsnews.com/elections/2024/president/)).
+
+#### Exploratory Data Analysis (EDA)
+
+**Dataset 1: Betting Market Data**
+
+- **Organization**: The dataset provides separate files for each state, containing the probability of a Republican win under the column "Donald Trump" and a Democratic win under "Kamala Harris." These probabilities are based on the amount bet on Polymarket for each candidate.
+- **Processing**: Data was aggregated by month, resulting in a final dataset of state-level probabilities for Republican and Democratic wins from April 17, 2024, to November 4, 2024.
+- **Evaluation**:
+  - Non-missing and missing observations were quantified for each probability column.
+  - Mean probabilities and standard deviations for Republican and Democratic wins nationwide were calculated.
+
+**Dataset 2: Poll Data**
+
+- **Organization**: The dataset contains polling data categorized by pollster, state, and candidate.
+- **Processing**: ...
