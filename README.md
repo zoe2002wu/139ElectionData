@@ -1,55 +1,50 @@
 # 139ElectionData
 
-Instructions for Gaining Access to this Repo
-1. Make sure I add you as a collaborator
+## Instructions for Gaining Access to this Repo
 
-On the front page, press the green Code drop down button and copy the HTTPs link
+### 1. Add as Collaborator
+Make sure I add you as a collaborator.
 
-3. Now, go to Posit Cloud and press New Project in Upper right
+### 2. Clone the Repository
+1. On the front page, press the green **Code** drop-down button and copy the HTTPs link.
+2. Go to **Posit Cloud** and press **New Project** in the upper-right corner.
+3. Select **New Project from GitHub Repository**.
+4. Enter the copied HTTPs link.
+5. While waiting, proceed to the next step.
 
-Press New Project from Github Repository
+---
 
-Enter your copied link
+## 2. Generate Personal Access Token on GitHub
+1. In the upper-right corner of any page on GitHub, click your profile photo, then click **Settings**.
+2. In the left sidebar, click **Developer settings**.
+3. In the left sidebar, under **Personal access tokens**, click **Tokens (classic)**.
+4. Select **Generate new token**, then click **Generate new token (classic)**.
+5. In the **Note** field, give your token a descriptive name.
+6. To give your token an expiration, select **Expiration**, then choose a default option or click **Custom** to enter a date.
+7. Select the scope by clicking **repo**.
+8. Click **Generate token**.
+9. Copy the generated token.
 
-While waiting do the next step
+---
 
-2. Generate Personal Access Token on Github
-In the upper-right corner of any page on GitHub, click your profile photo, then click  Settings.
+## 3. Connect GitHub to Posit Cloud
+1. Go to this link: [https://login.posit.cloud/identity/authentication](https://login.posit.cloud/identity/authentication).
+2. Check that **GitHub** is enabled.
 
-In the left sidebar, click  Developer settings.
+---
 
-In the left sidebar, under  Personal access tokens, click Tokens (classic).
+## 4. Push Changes from Posit Cloud
+1. Go back to Posit Cloud and edit your project.
+2. Press **Commit** in the top-right sub-window.
+3. Check all the files you want to add.
+4. Press **Commit**.
+5. Press **Push**.
+6. When prompted:
+   - Input your GitHub username.
+   - Input the Personal Access Token you copied from Step 2.
+7. Success! 🎉
 
-Select Generate new token, then click Generate new token (classic).
+---
 
-In the "Note" field, give your token a descriptive name.
-
-To give your token an expiration, select Expiration, then choose a default option or click Custom to enter a date.
-
-Just click repo. 
-
-Click Generate token.
-
-Copy
-
-3. Connect github
-
-Go to this link: https://login.posit.cloud/identity/authentication
-
-Check Github enabled
-
-5. Go back to posit cloud. Edit
-
-Press "commit" in the top right sub window
-
-Check all the files you want to add
-
-Press "commit"
-
-Press "push"
-
-Input your username. Input the Personal Access Token you have copied from step 2
-
-Yay
-
-4. Be sure to pull in the future if you want to get changes
+## 5. Pull Future Changes
+Be sure to **pull** the latest changes in the future if you want to sync with updates.
