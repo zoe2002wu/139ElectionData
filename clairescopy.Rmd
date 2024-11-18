@@ -1,0 +1,90 @@
+<<<<<<< HEAD
+=======
+---
+title: "Final Project EDA and Data Evaluation"
+author: "Your Name"
+date: "November 2024"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+### Question 3: Evaluating Data Quality
+
+This question encourages you to begin the exploratory data analysis (EDA) for your final project. By addressing potential data quality issues early, you can identify and rectify problems promptly. For each important variable in your dataset, assess its quality by creating a table that includes the following:
+
+-   **Continuous variables**:
+    -   The number of non-missing observations.
+    -   The number of missing observations.
+    -   Measures of central tendency (e.g., mean, median).
+    -   Measures of variability (e.g., standard deviation, interquartile range [IQR]).
+-   **Categorical variables**:
+    -   The levels of the variable.
+    -   For each level:
+        -   The number of non-missing observations.
+        -   The number of missing observations.
+
+### Answer: Comparing Predictive Performance of Betting Markets and Polls
+
+Our project aims to compare the predictive accuracy of betting markets and polls in forecasting the outcome of the 2024 U.S. presidential election by state. We use the following datasets:
+
+1.  **Betting Market Data**
+    -   Sourced from a Kaggle dataset, this dataset scrapes Polymarket's 2024 election results by state and consolidates them into a CSV file ([source](https://www.kaggle.com/datasets/pbizil/polymarket-2024-us-election-state-data)).
+2.  **Poll Data**
+    -   Sourced from FiveThirtyEight, this dataset provides polling averages and raw data from the 2024 U.S. presidential election ([source](https://projects.fivethirtyeight.com/polls/president-general/2024/national/)).
+3.  **Actual Election Results**
+    -   Sourced from CBS News, this dataset reports the official 2024 presidential election results ([source](https://www.cbsnews.com/elections/2024/president/)).
+
+#### Exploratory Data Analysis (EDA)
+
+**Dataset 1: Betting Market Data**
+
+The dataset provides separate files for each state, containing the probability of a Republican win under the column "Donald Trump" and a Democratic win under "Kamala Harris." These probabilities are based on the amount bet on Polymarket for each candidate. Data was aggregated by month, resulting in a final dataset of state-level probabilities for Republican and Democratic wins from April 17, 2024, to November 4, 2024. Non-missing and missing observations were quantified for each probability column. Mean probabilities and standard deviations for Republican and Democratic wins nationwide were calculated.
+
+```{r}
+
+```
+
+**Dataset 2: Poll Data**
+
+<<<<<<< HEAD
+- **Organization**: The dataset contains polling data categorized by pollster, state, and candidate.
+- **Processing**: ...
+>>>>>>> 6331ec501b2ae001a1eea077858e6dd98ebf45fc
+=======
+The dataset contains average polling data by candidate, date, and their adjusted percentage of being favored. We started out by exploring how many missing and non-missing data point there were for Harris and Trump. We then aggregated data over time, such that we are left with poll percentages for Harris/Trump per state. We take the mean to find the average poll percentage for Harris and Trump nationwide. We then take the standard deviation.
+
+```{r}
+polling_data <- read.csv("data/polls_survey_data/538_data/polls_average_2024.csv")
+library(dplyr)
+library(tidyverse)
+
+```
+
+```{r}
+
+#isolate 2024 polling data (there are many rwos from 2020 in here with no values)
+polling2024 <- polling_data %>%
+  filter(cycle == 2024) %>%
+  #take out the pct_trend_adjusted column (it's NA everywhere)
+  select(- pct_trend_adjusted)
+
+```
+
+```{r}
+#categorical variables - checking for missing data
+```
+
+**Dataset 3: Election Results**
+
+The dataset contains the number of votes for Harris and Trump, separated by state. We find the percentage who voted for Harris and Trump, the amount of missing and non-missing data, and the mean and variance. 
+
+```{r}
+```
+
+### Bibliography
+
+- Kaggle. *Polymarket 2024 US Election State Data*. Retrieved from: <https://www.kaggle.com/datasets/pbizil/polymarket-2024-us-election-state-data>  
+- FiveThirtyEight. *2024 Presidential Polls*. Retrieved from: <https://projects.fivethirtyeight.com/polls/president-general/2024/national/>  
+- CBS News. *2024 Presidential Election Results*. Retrieved from: <https://www.cbsnews.com/elections/2024/president/>
+>>>>>>> 639d512893906ff6c053736690bf5d96a9acf6c8
