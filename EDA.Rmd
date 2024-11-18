@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 ---
 title: "Final Project EDA and Data Evaluation"
 author: "Your Name"
@@ -57,6 +59,11 @@ The dataset provides separate files for each state, containing the probability o
 
 **Dataset 2: Poll Data**
 
+<<<<<<< HEAD
+- **Organization**: The dataset contains polling data categorized by pollster, state, and candidate.
+- **Processing**: ...
+>>>>>>> 6331ec501b2ae001a1eea077858e6dd98ebf45fc
+=======
 The dataset contains average polling data by candidate, date, and their adjusted percentage of being favored. We started out by exploring how many missing and non-missing data point there were for Harris and Trump. We then aggregated data over time, such that we are left with poll percentages for Harris/Trump per state. We take the mean to find the average poll percentage for Harris and Trump nationwide. We then take the standard deviation.
 
 ```{r}
@@ -116,3 +123,4 @@ print(stats_summary)
 - Kaggle. *Polymarket 2024 US Election State Data*. Retrieved from: <https://www.kaggle.com/datasets/pbizil/polymarket-2024-us-election-state-data>  
 - FiveThirtyEight. *2024 Presidential Polls*. Retrieved from: <https://projects.fivethirtyeight.com/polls/president-general/2024/national/>  
 - CBS News. *2024 Presidential Election Results*. Retrieved from: <https://www.cbsnews.com/elections/2024/president/>
+>>>>>>> 639d512893906ff6c053736690bf5d96a9acf6c8
