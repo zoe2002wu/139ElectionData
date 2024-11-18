@@ -1,5 +1,4 @@
 <<<<<<< HEAD
-test test test!
 =======
 ---
 title: "Final Project EDA and Data Evaluation"
