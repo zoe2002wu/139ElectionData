@@ -24,6 +24,18 @@ This question encourages you to begin the exploratory data analysis (EDA) for yo
 
 ### Answer: Comparing Predictive Performance of Betting Markets and Polls
 
+
+```{r}
+install.packages("readr")
+
+```
+
+```{r}
+# Load necessary libraries
+library(readr)
+library(dplyr)
+```
+
 Our project aims to compare the predictive accuracy of betting markets and polls in forecasting the outcome of the 2024 U.S. presidential election by state. We use the following datasets:
 
 1.  **Betting Market Data**
@@ -48,6 +60,10 @@ The dataset provides separate files for each state, containing the probability o
 The dataset contains average polling data by candidate, date, and their adjusted percentage of being favored. We started out by exploring how many missing and non-missing data point there were for Harris and Trump. We then aggregated data over time, such that we are left with poll percentages for Harris/Trump per state. We take the mean to find the average poll percentage for Harris and Trump nationwide. We then take the standard deviation.
 
 ```{r}
+
+# Load the dataset
+poll_data <- read_csv("data/polls_data/538_data/polls_average_2024.csv")
+
 ```
 
 **Dataset 3: Election Results**
@@ -55,6 +71,44 @@ The dataset contains average polling data by candidate, date, and their adjusted
 The dataset contains the number of votes for Harris and Trump, separated by state. We find the percentage who voted for Harris and Trump, the amount of missing and non-missing data, and the mean and variance. 
 
 ```{r}
+
+# Load the dataset
+actual_results <- read_csv("data/actual_results_data/state_results_2024.csv")
+
+# Add percentage columns for Harris and Trump
+actual_results <- actual_results %>%
+  mutate(
+    percent_harris = (Harris_Votes / (Harris_Votes + Trump_Votes)) * 100,
+    percent_trump = (Trump_Votes / (Harris_Votes + Trump_Votes)) * 100
+  )
+
+# Calculate the number of missing and non-missing observations for each column
+missing_summary <- actual_results %>%
+  summarise(
+    missing_harris = sum(is.na(Harris_Votes)),
+    non_missing_harris = sum(!is.na(Harris_Votes)),
+    missing_trump = sum(is.na(Trump_Votes)),
+    non_missing_trump = sum(!is.na(Trump_Votes))
+  )
+
+# Calculate the mean and variance for votes and percentages
+stats_summary <- actual_results %>%
+  summarise(
+    mean_Harris_Votes = mean(Harris_Votes, na.rm = TRUE),
+    var_Harris_Votes = var(Harris_Votes, na.rm = TRUE),
+    mean_Trump_Votes = mean(Trump_Votes, na.rm = TRUE),
+    var_Trump_Votes = var(Trump_Votes, na.rm = TRUE),
+    mean_percent_harris = mean(percent_harris, na.rm = TRUE),
+    var_percent_harris = var(percent_harris, na.rm = TRUE),
+    mean_percent_trump = mean(percent_trump, na.rm = TRUE),
+    var_percent_trump = var(percent_trump, na.rm = TRUE)
+  )
+
+# View the missing data summary
+print(missing_summary)
+
+# View the statistical summary
+print(stats_summary)
 ```
 
 ### Bibliography
