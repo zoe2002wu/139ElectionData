@@ -50,30 +50,32 @@ Our project aims to compare the predictive accuracy of betting markets and polls
 
 **Dataset 1: Betting Market Data**
 
-The dataset provides separate files for each state, containing the probability of a Republican win under the column "Donald Trump" and a Democratic win under "Kamala Harris." These probabilities are based on the amount bet on Polymarket for each candidate. Data was aggregated by month, resulting in a final dataset of state-level probabilities for Republican and Democratic wins from April 17, 2024, to November 4, 2024. Non-missing and missing observations were quantified for each probability column. Mean probabilities and standard deviations for Republican and Democratic wins nationwide were calculated.
+The dataset provides separate files for each state, containing the probability of a Republican win under the column "Donald Trump" and a Democratic win under "Kamala Harris." These probabilities are based on the amount bet on Polymarket for each candidate. Data was aggregated by month, resulting in a final dataset of state-level probabilities for Republican and Democratic wins from April 17, 2024, to November 4, 2024. 
+
+
+Columns Included "Date (UTC)","Timestamp (UTC)","Donald Trump","Kamala Harris", and "Other". All values of the table were continuous, enumerating the date, time, percentage probability for Trump, percentage probability for Kamala, and percentage probability for a different candidate. No cateogrical variables existed.
+
+First non-missing and missing observations were quantified for each probability column. Mean probabilities and standard deviations for Republican and Democratic wins nationwide were calculated.
 
 ```{r}
 
-# Define the directory containing the files
+#Access csv files in directory
 file_path <- "data/betting_data/polymarket/csv_month/"
 
-# Get a list of all CSV files in the directory
 file_list <- list.files(path = file_path, pattern = "*.csv", full.names = TRUE)
 
-# Initialize data frames to store results
+# Data frames to store results
 final_data <- data.frame()
 missing_data_summary <- data.frame()
 
-# Loop through each file to process data
 for (file in file_list) {
-  # Read the CSV file
   state_data <- read_csv(file, show_col_types = FALSE)
   
   # Extract the state abbreviation from the file name
   state_abbrev <- tools::file_path_sans_ext(basename(file)) %>% 
     stringr::str_extract("^[A-Z]{2}")
   
-  # Calculate averages for Donald Trump and Kamala Harris
+  # Calculate averages for  Trump and Harris
   avg_trump <- mean(state_data$`Donald Trump`, na.rm = TRUE)
   avg_harris <- mean(state_data$`Kamala Harris`, na.rm = TRUE)
   
@@ -107,7 +109,6 @@ for (file in file_list) {
     state = c(state_abbrev, state_abbrev)
   )
   
-  # Append to the final data frame
   final_data <- bind_rows(final_data, state_results)
 }
 
@@ -121,20 +122,52 @@ nationwide_stats <- final_data %>%
     total_missing = sum(is.na(percentage))
   )
 
-# View the final summaries
 print(missing_data_summary)
 
-<<<<<<< HEAD
-#isolate 2024 polling data (there are many rows from 2020 in here with no values)
-polling2024 <- polling_data %>%
-  filter(cycle == 2024) %>%
-  #take out the pct_trend_adjusted column (it's NA everywhere)
-  select(- pct_trend_adjusted)
-=======
 print(nationwide_stats)
->>>>>>> 15282d0bed81851555ee54ce6c40634078cfaf1f
 
 ```
+
+While we will be aggregating over time, we nevertheless ran a missing information test on data and timestamp.
+
+```{r}
+missing_data_summary <- data.frame()
+
+for (file in file_list) {
+  state_data <- read_csv(file, show_col_types = FALSE)
+  
+  # Extract the state abbreviation from the file name
+  state_abbrev <- tools::file_path_sans_ext(basename(file)) %>% 
+    stringr::str_extract("^[A-Z]{2}")
+  
+  # Count missing and non-missing observations for each candidate
+  non_missing_date <- sum(!is.na(state_data$`Date (UTC)`))
+  missing_date <- sum(is.na(state_data$`Date (UTC)`))
+  non_missing_timestamp <- sum(!is.na(state_data$`Timestamp (UTC)`))
+  missing_timestamp <- sum(is.na(state_data$`Timestamp (UTC)`))
+  
+  # Append missing data summary for this state
+  missing_data_summary <- bind_rows(
+    missing_data_summary,
+    data.frame(
+      state = state_abbrev,
+      variable = "Date",
+      non_missing = non_missing_date,
+      missing = missing_date
+    ),
+    data.frame(
+      state = state_abbrev,
+      variable = "Timestamp",
+      non_missing = non_missing_timestamp,
+      missing = missing_timestamp
+    )
+  )
+}
+
+print(missing_data_summary)
+
+```
+
 
 **Dataset 2: Poll Data**
 
@@ -146,7 +179,6 @@ The dataset contains the number of votes for Harris and Trump, separated by stat
 
 ```{r}
 
-# Load the dataset
 actual_results <- read_csv("data/actual_results_data/state_results_2024.csv")
 
 # Add percentage columns for Harris and Trump
@@ -162,7 +194,9 @@ missing_summary <- actual_results %>%
     missing_harris = sum(is.na(Harris_Votes)),
     non_missing_harris = sum(!is.na(Harris_Votes)),
     missing_trump = sum(is.na(Trump_Votes)),
-    non_missing_trump = sum(!is.na(Trump_Votes))
+    non_missing_trump = sum(!is.na(Trump_Votes)),
+    missing_state = sum(is.na(State)),
+    non_missing_trump = sum(!is.na(State))
   )
 
 # Calculate the mean and variance for votes and percentages
