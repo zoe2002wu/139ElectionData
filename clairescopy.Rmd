@@ -82,6 +82,7 @@ polling2024 <- polling_data %>%
 
 cat_vars <- c("candidate", "date", "state", "cycle", "party")
 
+#function which calculates number of levels, and missing observations for each column
 
 cat_eda <- function(data, vars) {
   
@@ -89,16 +90,18 @@ cat_eda <- function(data, vars) {
   nas <- numeric(length(cat_vars))
   non_nas <- numeric(length(cat_vars))
   
+  #iterate through cat varaibles
   for (i in 1:5) {
     col <- vars[i]
+    #update values appropriately
     levels[i] <- length(unique(data[[col]]))
-    print(levels[i])
     nas[i] <- sum(is.na(data[[col]]))
     non_nas[i] <- length(data[[col]]) - nas
   }
   
+   #put results into table
    results <- data.frame(
-    Column = vars,
+    Variable = vars,
     Levels = levels,
     Missing = nas,
     NonMissing = non_nas)
@@ -108,7 +111,9 @@ cat_eda <- function(data, vars) {
 
 cat_eda(polling2024, cat_vars)
 ```
+Notable things - not all 50 states are represented, since we only have 30 levels for the state. Only one cycle is represented here - further analysis on this might require addition of other cycles to corroborate results. Also, there are no missing data values (Except for the column that we dropped which was entirely empty) - very clear data set... and there are 4 candidates represented, although in later terms there are only 2 as people dropped out of the race. 
 
+Interesting things to potentially look at - could Biden's initial run be understood as a separate "mini" race within this election? Can we use that as a different case study?
 
 ```{r}
   # **Continuous variables**:
@@ -116,8 +121,61 @@ cat_eda(polling2024, cat_vars)
   #   -   The number of missing observations.
   #   -   Measures of central tendency (e.g., mean, median).
   #   -   Measures of variability (e.g., standard deviation, interquartile range [IQR]).
-```
 
+cont_vars <- c("pct_estimate", "hi", "lo")
+
+cont_eda <- function(data, vars) {
+  l <- length(cont_vars)
+  mean <- numeric(l)
+  median <- numeric(l)
+  sd <- numeric(l)
+  iqr <- numeric(l)
+  nas <- numeric(l)
+  non_nas <- numeric(l)
+
+  
+  #iterate through cont varaibles
+  for (i in 1:l) {
+    col <- vars[i]
+    #update values appropriately
+    x <- data[[col]]
+    nas[i] <- sum(is.na(x))
+    non_nas[i] <- length(x) - nas
+    mean[i] <- mean(x)
+    median[i] <- median(x)
+    sd[i] <- sd(x)
+    iqr[i] <- IQR(x)
+  }
+  
+   #put results into table
+   results <- data.frame(
+    Variable = vars,
+    Missing = nas,
+    NonMissing = non_nas,
+    Mean = mean,
+    Median = median,
+    IQR = iqr,
+    StandardDeviation = sd)
+   
+   return(results)
+}
+
+cont_eda(polling2024, cont_vars)
+
+```
+```{r}
+#polling information by state
+polling_bystate <- polling2024 %>% 
+  filter(candidate == "Trump" | candidate == "Harris") %>%
+  group_by(state, candidate) %>%
+  summarize(mean = mean(pct_estimate), 
+          median = median(pct_estimate),
+          sd = sd(pct_estimate), 
+          iqr = IQR(pct_estimate))
+
+polling_bystate
+```
+Things to think about - again, we have no missing values, so there are no missing values throughout this entire dataset. This gives us a good idea for around where the range hovers (i.e. there was no clear winner), which gives evidence that this is an interesting question (since if there was an obvious winner, the additional granularity of the betting data might be useless because the answer is so obvious.) It might be interesting that the range of the the highs is actually lower than the lows, but the standard deviations are all relatively similar. Looking by state also gives us some interesting information! 
 
 **Dataset 3: Election Results**
 
