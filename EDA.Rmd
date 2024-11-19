@@ -68,7 +68,7 @@ library(tidyverse)
 
 ```{r}
 
-#isolate 2024 polling data (there are many rwos from 2020 in here with no values)
+#isolate 2024 polling data (there are many rows from 2020 in here with no values)
 polling2024 <- polling_data %>%
   filter(cycle == 2024) %>%
   #take out the pct_trend_adjusted column (it's NA everywhere)

@@ -62,7 +62,6 @@ library(tidyverse)
 ```
 
 ```{r}
-
 #isolate 2024 polling data (there are many rwos from 2020 in here with no values)
 polling2024 <- polling_data %>%
   filter(cycle == 2024) %>%
@@ -73,7 +72,52 @@ polling2024 <- polling_data %>%
 
 ```{r}
 #categorical variables - checking for missing data
+# **Categorical variables**:
+#     -   The levels of the variable.
+#     -   For each level:
+#         -   The number of non-missing observations.
+#         -   The number of missing observations.
+
+#cat variables - candidate, date, state, cycle, party
+
+cat_vars <- c("candidate", "date", "state", "cycle", "party")
+
+
+cat_eda <- function(data, vars) {
+  
+  levels <- numeric(length(cat_vars))
+  nas <- numeric(length(cat_vars))
+  non_nas <- numeric(length(cat_vars))
+  
+  for (i in 1:5) {
+    col <- vars[i]
+    levels[i] <- length(unique(data[[col]]))
+    print(levels[i])
+    nas[i] <- sum(is.na(data[[col]]))
+    non_nas[i] <- length(data[[col]]) - nas
+  }
+  
+   results <- data.frame(
+    Column = vars,
+    Levels = levels,
+    Missing = nas,
+    NonMissing = non_nas)
+   
+   return(results)
+}
+
+cat_eda(polling2024, cat_vars)
 ```
+
+
+```{r}
+  # **Continuous variables**:
+  #   -   The number of non-missing observations.
+  #   -   The number of missing observations.
+  #   -   Measures of central tendency (e.g., mean, median).
+  #   -   Measures of variability (e.g., standard deviation, interquartile range [IQR]).
+```
+
 
 **Dataset 3: Election Results**
 
