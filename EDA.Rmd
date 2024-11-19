@@ -160,10 +160,6 @@ missing_summary <- actual_results %>%
 # Calculate the mean and variance for votes and percentages
 stats_summary <- actual_results %>%
   summarise(
-    mean_Harris_Votes = mean(Harris_Votes, na.rm = TRUE),
-    var_Harris_Votes = var(Harris_Votes, na.rm = TRUE),
-    mean_Trump_Votes = mean(Trump_Votes, na.rm = TRUE),
-    var_Trump_Votes = var(Trump_Votes, na.rm = TRUE),
     mean_percent_harris = mean(percent_harris, na.rm = TRUE),
     var_percent_harris = var(percent_harris, na.rm = TRUE),
     mean_percent_trump = mean(percent_trump, na.rm = TRUE),
