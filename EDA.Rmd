@@ -208,10 +208,7 @@ stats_summary <- actual_results %>%
     var_percent_trump = var(percent_trump, na.rm = TRUE)
   )
 
-# View the missing data summary
 print(missing_summary)
-
-# View the statistical summary
 print(stats_summary)
 ```
 
