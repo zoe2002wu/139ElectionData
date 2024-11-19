@@ -27,6 +27,7 @@ This question encourages you to begin the exploratory data analysis (EDA) for yo
 
 ```{r}
 install.packages("readr")
+install.packages("dplyr")
 
 ```
 
@@ -53,33 +54,91 @@ The dataset provides separate files for each state, containing the probability o
 
 ```{r}
 
-```
+# Define the directory containing the files
+file_path <- "data/betting_data/polymarket/csv_month/"
 
-**Dataset 2: Poll Data**
+# Get a list of all CSV files in the directory
+file_list <- list.files(path = file_path, pattern = "*.csv", full.names = TRUE)
 
-The dataset contains average polling data by candidate, date, and their adjusted percentage of being favored. We started out by exploring how many missing and non-missing data point there were for Harris and Trump. We then aggregated data over time, such that we are left with poll percentages for Harris/Trump per state. We take the mean to find the average poll percentage for Harris and Trump nationwide. We then take the standard deviation.
+# Initialize data frames to store results
+final_data <- data.frame()
+missing_data_summary <- data.frame()
 
-```{r}
-polling_data <- read.csv("data/polls_survey_data/538_data/polls_average_2024.csv")
-library(dplyr)
-library(tidyverse)
+# Loop through each file to process data
+for (file in file_list) {
+  # Read the CSV file
+  state_data <- read_csv(file, show_col_types = FALSE)
+  
+  # Extract the state abbreviation from the file name
+  state_abbrev <- tools::file_path_sans_ext(basename(file)) %>% 
+    stringr::str_extract("^[A-Z]{2}")
+  
+  # Calculate averages for Donald Trump and Kamala Harris
+  avg_trump <- mean(state_data$`Donald Trump`, na.rm = TRUE)
+  avg_harris <- mean(state_data$`Kamala Harris`, na.rm = TRUE)
+  
+  # Count missing and non-missing observations for each candidate
+  non_missing_trump <- sum(!is.na(state_data$`Donald Trump`))
+  missing_trump <- sum(is.na(state_data$`Donald Trump`))
+  non_missing_harris <- sum(!is.na(state_data$`Kamala Harris`))
+  missing_harris <- sum(is.na(state_data$`Kamala Harris`))
+  
+  # Append missing data summary for this state
+  missing_data_summary <- bind_rows(
+    missing_data_summary,
+    data.frame(
+      state = state_abbrev,
+      candidate = "Donald Trump",
+      non_missing = non_missing_trump,
+      missing = missing_trump
+    ),
+    data.frame(
+      state = state_abbrev,
+      candidate = "Kamala Harris",
+      non_missing = non_missing_harris,
+      missing = missing_harris
+    )
+  )
+  
+  # Create a new data structure for average percentages
+  state_results <- data.frame(
+    candidate = c("Donald Trump", "Kamala Harris"),
+    percentage = c(avg_trump, avg_harris),
+    state = c(state_abbrev, state_abbrev)
+  )
+  
+  # Append to the final data frame
+  final_data <- bind_rows(final_data, state_results)
+}
 
-```
+# Calculate nationwide statistics
+nationwide_stats <- final_data %>%
+  group_by(candidate) %>%
+  summarise(
+    nationwide_mean = mean(percentage, na.rm = TRUE),
+    nationwide_sd = sd(percentage, na.rm = TRUE),
+    total_non_missing = sum(!is.na(percentage)),
+    total_missing = sum(is.na(percentage))
+  )
 
-```{r}
+# View the final summaries
+print(missing_data_summary)
 
+<<<<<<< HEAD
 #isolate 2024 polling data (there are many rows from 2020 in here with no values)
 polling2024 <- polling_data %>%
   filter(cycle == 2024) %>%
   #take out the pct_trend_adjusted column (it's NA everywhere)
   select(- pct_trend_adjusted)
+=======
+print(nationwide_stats)
+>>>>>>> 15282d0bed81851555ee54ce6c40634078cfaf1f
 
 ```
 
-```{r}
-#categorical variables - checking for missing data
+**Dataset 2: Poll Data**
 
-```
+The dataset contains average polling data by candidate, date, and their adjusted percentage of being favored. We started out by exploring how many missing and non-missing data point there were for Harris and Trump. We then aggregated data over time, such that we are left with poll percentages for Harris/Trump per state. We take the mean to find the average poll percentage for Harris and Trump nationwide. We then take the standard deviation.
 
 **Dataset 3: Election Results**
 
@@ -109,10 +168,6 @@ missing_summary <- actual_results %>%
 # Calculate the mean and variance for votes and percentages
 stats_summary <- actual_results %>%
   summarise(
-    mean_Harris_Votes = mean(Harris_Votes, na.rm = TRUE),
-    var_Harris_Votes = var(Harris_Votes, na.rm = TRUE),
-    mean_Trump_Votes = mean(Trump_Votes, na.rm = TRUE),
-    var_Trump_Votes = var(Trump_Votes, na.rm = TRUE),
     mean_percent_harris = mean(percent_harris, na.rm = TRUE),
     var_percent_harris = var(percent_harris, na.rm = TRUE),
     mean_percent_trump = mean(percent_trump, na.rm = TRUE),
