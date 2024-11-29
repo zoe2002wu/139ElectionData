@@ -56,6 +56,7 @@ The dataset contains average polling data by candidate, date, and their adjusted
 
 ```{r}
 polling_data <- read.csv("data/polls_survey_data/538_data/polls_average_2024.csv")
+
 library(dplyr)
 library(tidyverse)
 
@@ -176,6 +177,60 @@ polling_bystate <- polling2024 %>%
 polling_bystate
 ```
 Things to think about - again, we have no missing values, so there are no missing values throughout this entire dataset. This gives us a good idea for around where the range hovers (i.e. there was no clear winner), which gives evidence that this is an interesting question (since if there was an obvious winner, the additional granularity of the betting data might be useless because the answer is so obvious.) It might be interesting that the range of the the highs is actually lower than the lows, but the standard deviations are all relatively similar. Looking by state also gives us some interesting information! 
+
+
+Okay. now to start making visualizations!! 
+
+```{r}
+#preliminary wrangling
+results <- read.csv("data/actual_results_data/state_results_2024.csv")
+
+results <- results %>% 
+  mutate(trump_win = case_when(Trump_Votes > Harris_Votes ~ 1, 
+                                Trump_Votes < Harris_Votes ~ 0))
+
+polling_bystate_rshape <- polling_bystate %>% 
+  select(state, candidate, mean) %>% 
+  pivot_wider(names_from = candidate, values_from = mean) %>%
+  mutate(pred_twin = case_when(Trump > Harris ~ 1, 
+                               Trump < Harris ~ 0))
+
+state_polls <- filter(polling_bystate, candidate == "Trump")
+#below has a few NAs because of missing cd2s in nebraska, maine, and national reuslt
+polling_bystate_tr <- left_join(polling_bystate_rshape, results, by = c("state" = "State"))
+
+matched_results <- mutate(polling_bystate_tr,
+                          match = case_when(trump_win == pred_twin ~ 1, 
+                                            trump_win != pred_twin ~ 0), 
+                          state = tolower(state))
+
+
+```
+
+```{r}
+library(maps)
+us_states <- map_data("state")
+
+us_states <- us_states %>%
+  left_join(matched_results, by = c("region" = "state")) %>% 
+  mutate(match = coalesce(match, 2), 
+         match = as.factor(match))
+
+ggplot(us_states, aes(long, lat, group = group, fill = match)) +
+  geom_polygon(color = "black") +  # Draw state boundaries
+  scale_fill_manual(
+    values = c("0" = "red", "1" = "green", "2" = "grey"),
+    name = "Match",  # Legend title
+    labels = c("Wrong", "Right", "NA"))  +
+  labs(title = "Total Poll Accuracy in Predicting Trump Win")
+```
+
+```{r}
+#lets see if its the same when we only look at the last month of polling - maybe the earlier results were not accurate? 
+
+
+
+```
 
 **Dataset 3: Election Results**
 
