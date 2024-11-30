@@ -55,6 +55,9 @@ install.packages("dplyr")
 # Load necessary libraries
 library(readr)
 library(dplyr)
+library(dplyr)
+library(readr)
+
 ```
 
 ```{r}
@@ -122,9 +125,9 @@ nationwide_stats <- final_data %>%
     total_missing = sum(is.na(percentage))
   )
 
-print(missing_data_summary)
+#print(missing_data_summary)
 
-print(nationwide_stats)
+#print(nationwide_stats)
 
 ```
 
@@ -164,7 +167,7 @@ for (file in file_list) {
   )
 }
 
-print(missing_data_summary)
+#print(missing_data_summary)
 
 ```
 
@@ -331,14 +334,120 @@ stats_summary <- actual_results %>%
     var_percent_trump = var(percent_trump, na.rm = TRUE)
   )
 
-print(missing_summary)
-print(stats_summary)
+#print(missing_summary)
+#print(stats_summary)
 ```
 This dataset does not contain any missing data. 
 
 **Final Thoughts**
+
 The analysis highlights that all three datasets—betting market data, polling data, and actual election results—are well-structured with minimal to no missing values, giving us reliable and comprehensive insights. The lack of missing data facilitates robust comparisons across datasets, allowing us to evaluate the predictive accuracy of betting markets and polls effectively. Interestingly, the variability observed in polling data and betting market probabilities reflects the competitiveness of the 2024 U.S. presidential election, showing the value of nuanced data sources for prediction. This data can provide a glimpse into how markets can be telltales of current political trends.
 
+## Baseline Model
+
+Let's start by reading in the actual data and manipulating it such that we have a column titles 'trump_win' where a 1 denotes a state he won and a 0 denotes a state he lost.
+
+```{r}
+results <- read.csv("data/actual_results_data/state_results_2024.csv")
+results <- results %>%
+mutate(trump_win = case_when(Trump_Votes > Harris_Votes ~ 1,
+Trump_Votes < Harris_Votes ~ 0))
+
+results <- results %>%
+mutate(
+percent_harris = (Harris_Votes / (Harris_Votes + Trump_Votes)) * 100,
+percent_trump = (Trump_Votes / (Harris_Votes + Trump_Votes)) * 100
+)
+```
+
+```{r}
+colnames(final_data)[colnames(final_data) == "state"] <- "State"
+final_data$State <- state.name[match(final_data$State, state.abb)]
+final_data <- left_join(final_data, results, by = "State")
+```
+
+```{r}
+library(tidyverse)
+betting_data <- final_data %>%
+  pivot_wider(
+    names_from = candidate, 
+    values_from = percentage, 
+    names_prefix = "percentage_"
+  )
+
+colnames(betting_data) <- gsub(" ", "_", colnames(betting_data))
+
+head(betting_data)
+```
+
+```{r}
+betting_model <- lm(trump_win ~ `percentage_Donald_Trump` + `percentage_Kamala_Harris`, data = betting_data)
+summary(betting_model)
+```
+
+```{r}
+polling_bystate <- polling2024 %>%
+filter(candidate == "Trump" | candidate == "Harris") %>%
+group_by(state, candidate) %>%
+summarize(mean = mean(pct_estimate),
+median = median(pct_estimate),
+sd = sd(pct_estimate),
+iqr = IQR(pct_estimate))
+```
+
+```{r}
+polls_data <- polling_bystate %>%
+  pivot_wider(
+    names_from = candidate,
+    values_from = c(median, sd, iqr, mean) 
+  )
+
+head(polls_data)
+```
+
+```{r}
+colnames(polls_data)[colnames(polls_data) == "state"] <- "State"
+polls_data <- left_join(polls_data, results, by = "State")
+
+polling_model <- lm(trump_win ~ mean_Harris + mean_Trump, data = polls_data)
+
+summary(polling_model)
+```
+
+```{r}
+betting_data$predictions <- predict(betting_model, betting_data)
+
+polls_data$predictions <- predict(polling_model, polls_data)
+```
+
+```{r}
+colnames(polls_data)[colnames(polls_data) == "state"] <- "State"
+
+polling_model <- lm(trump_win ~ mean_Harris + mean_Trump, data = polls_data)
+
+summary(polling_model)
+```
+
+```{r}
+betting_data$predictions <- predict(betting_model, betting_data)
+
+polls_data$predictions <- predict(polling_model, polls_data)
+```
+
+```{r}
+ggplot(betting_data, aes(x = predictions, y = percent_trump)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(title = "Betting Model Predictions vs Actual", x = "Predicted Probability", y = "Actual Outcome")
+
+ggplot(polls_data, aes(x = predictions, y = percent_trump)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(title = "Poll Model Predictions vs Actual", x = "Predicted Probability", y = "Actual Outcome")
+
+```
+
+We see from the figures above that comparing the baseline models from the polling data and the betting data, that the polling data currently seems to be much more accurate. However, we hope to explore if that statement stills holds once we adjust our models and improve their accuracy.
 
 ### Bibliography
 

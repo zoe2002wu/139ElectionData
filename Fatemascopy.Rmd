@@ -181,7 +181,6 @@ polls_data <- polls_data %>%
 betting_metrics <- evaluate_linear_model(betting_data, "predictions", "trump_win")
 poll_metrics <- evaluate_linear_model(polls_data, "predictions", "trump_win")
 
-# Print Metrics
 cat("Betting Model Metrics:\n")
 print(betting_metrics)
 
