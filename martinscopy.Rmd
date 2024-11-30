@@ -1,0 +1,137 @@
+ 
+To start analyzing our betting data we will first begin by processing our monthly data such that we can analyze state averages for each month. We will first look at the popularity of the canddiates within each state and refine our visualizations down to states which our betting data suggests are close:
+
+```{r}
+
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+#folder path for csv_month
+file_path <- "project_data/betting_data/polymarket/csv_month"
+
+#list all files in the csv_month directory
+file_list <- list.files(path = file_path, pattern = "*.csv", full.names = TRUE)
+
+
+monthly_data <- data.frame()
+
+for (file in file_list) {
+  state_data <- read_csv(file, show_col_types = FALSE)
+  
+  #extract state abbreviation
+  state_abbrev <- tools::file_path_sans_ext(basename(file)) %>% 
+    stringr::str_replace("_monthly", "")
+  
+  #add state column
+  state_data <- state_data %>%
+    mutate(
+      state = state_abbrev,
+      `Date (UTC)` = as.Date(`Date (UTC)`, format = "%m-%d-%Y")
+    )
+  
+  
+  monthly_data <- bind_rows(monthly_data, state_data)
+}
+
+
+```
+
+First to analyze poularity within each state we make a heat map for each state depicting the division of the state for each candidate:
+
+```{r}
+#aggregate data for heatmap
+heatmap_data <- monthly_data %>%
+  group_by(state) %>%
+  summarise(
+    Kamala_Harris = mean(`Kamala Harris`, na.rm = TRUE),
+    Donald_Trump = mean(`Donald Trump`, na.rm = TRUE)
+  ) %>%
+  pivot_longer(cols = c(Kamala_Harris, Donald_Trump), names_to = "Candidate", values_to = "Percentage")
+
+# Heatmap
+ggplot(heatmap_data, aes(x = state, y = Candidate, fill = Percentage)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "lightblue", high = "red") +
+  labs(
+    title = "Heatmap of Average Candidate Percentages by State",
+    x = "State",
+    y = "Candidate",
+    fill = "Average Percentage"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+```
+
+We see from the above heatmap that our polymarket data identifies 7 true "swing" states in: WI, PA, AZ, GA, MI, MN, NV. Analyzing these states closely using trend lines for each month we can see that:
+
+```{r}
+#define crucial states
+crucial_states <- c("GA", "PA", "WI", "MI", "AZ", "NV")
+
+#aggegate trend data by date and state
+trend_data <- monthly_data %>%
+  group_by(`Date (UTC)`, state) %>%
+  summarise(
+    Kamala_Harris = mean(`Kamala Harris`, na.rm = TRUE),
+    Donald_Trump = mean(`Donald Trump`, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_longer(cols = c(Kamala_Harris, Donald_Trump), names_to = "Candidate", values_to = "Percentage")
+
+#filter data for swing states
+crucial_trend_data <- trend_data %>%
+  filter(state %in% crucial_states)
+
+#line plots for swing states
+ggplot(crucial_trend_data, aes(x = `Date (UTC)`, y = Percentage, color = Candidate, group = Candidate)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 2) +
+  facet_wrap(~state) +
+  labs(
+    title = "Candidate Trends Over Time in Crucial States",
+    x = "Date",
+    y = "Percentage",
+    color = "Candidate"
+  ) +
+  theme_minimal()
+
+
+```
+
+
+As seen above the favorite for presidency flipped over the months in the majority of these states, however, a crucial observation is that Polymarket consistently projected Donald Trump as the favorite in Georgia. This is contrary to many news outlets(maybe analyze this using the poll data and see if the polls suggest the same?) which reported that GA was a highly volatile swing state.\\
+
+One interesting thing to observe is that all of our trend lines in each swing state have significant spikes in Trumps favor in July. As we know, July is the month in which there was an assassination attempt on Donald Trump after which a very patriotic moment and picture was captured of him bumping his fist in the air. We see that the Polymarket data reflects that this moment(likely and picture led to a significant increase in favorability within all of the swing states
+ 
+Analyzing our data for the swing states further we see that:
+
+
+
+```{r}
+# Filter data for crucial states
+crucial_monthly_data <- monthly_data %>%
+  filter(state %in% crucial_states)
+
+#boxplot for swing states
+ggplot(crucial_monthly_data, aes(x = state, y = `Kamala Harris`, fill = "Kamala Harris")) +
+  geom_boxplot(alpha = 0.7) +
+  geom_boxplot(aes(y = `Donald Trump`, fill = "Donald Trump"), alpha = 0.5) +
+  labs(
+    title = "Distribution of Candidate Percentages in Crucial States",
+    x = "State",
+    y = "Percentage",
+    fill = "Candidate"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+Where the variability in candidate support provides key insights into the dynamics of the swing states. Donald Trump showed consistent and strong support in Arizona and Georgia, with medians around 60% and relatively narrow variability, while Kamala Harris trailed with medians near 40%. This is inverse with what we see in Michigan where Harris had consistent support of 60% and low variability.\\
+
+We see that in Nevada, support is more variable, but Harris has a slight edge with a median of 55%, compared to Trump’s 50%. Crucially, we see that our Polymarket data is telling us that the the crucial battleground ground states were Pennsylvania and Wisconsin as Harris only led narrowly in both states (medians around 55–60%), yet there is a big overlap in variability. This is very consitent with what we saw in our trend line plots.
+

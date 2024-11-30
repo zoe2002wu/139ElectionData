@@ -33,7 +33,15 @@ Make sure I add you as a collaborator.
 
 ---
 
-## 4. Push Changes from Posit Cloud
+## 4. Git config
+1. Find terminal on posit cloud and type in
+git config --global user.email "you@example.com"
+git config --global user.name "user_name"
+Replace your email and name with your credentials
+
+---
+
+## 5. Push Changes from Posit Cloud
 1. Go back to Posit Cloud and edit your project.
 2. Press **Commit** in the top-right sub-window.
 3. Check all the files you want to add.
@@ -46,5 +54,5 @@ Make sure I add you as a collaborator.
 
 ---
 
-## 5. Pull Future Changes
+## 6. Pull Future Changes
 Be sure to **pull** the latest changes in the future if you want to sync with updates.
