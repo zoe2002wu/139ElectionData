@@ -48,16 +48,17 @@ First non-missing and missing observations were quantified for each probability 
 ```{r}
 install.packages("readr")
 install.packages("dplyr")
-
+install.packages("ggplot2")
+install.packages("caret")
 ```
 
 ```{r}
 # Load necessary libraries
 library(readr)
 library(dplyr)
-library(dplyr)
-library(readr)
-
+library(ggplot2)
+library(caret)
+library(tidyverse)
 ```
 
 ```{r}
@@ -172,6 +173,74 @@ for (file in file_list) {
 ```
 
 We have no missing data in the csv files for each state, suggesting this dataset is good to go.
+
+```{r}
+install.packages("sf")
+install.packages("maps")
+install.packages("tigris")
+```
+
+```{r}
+# Calculate the blue percentage (Kamala Harris's share of the total percentage)
+single_percent <- final_data %>%
+  filter(candidate %in% c("Kamala Harris", "Donald Trump")) %>% # Keep only relevant candidates
+  pivot_wider(names_from = candidate, values_from = percentage) %>% # Reshape to wide format
+  mutate(
+    blue_percentage = `Kamala Harris` / (`Kamala Harris` + `Donald Trump`) # Calculate ratio
+  ) %>%
+  select(state, blue_percentage) # Keep only state and blue_percentage
+
+# Print result
+print(single_percent)
+```
+
+```{r}
+library(sf)
+library(dplyr)
+library(ggplot2)
+
+# Calculate blue_percentage as a percentage (0 to 100)
+single_percent <- final_data %>%
+  filter(candidate %in% c("Kamala Harris", "Donald Trump")) %>%
+  pivot_wider(names_from = candidate, values_from = percentage) %>%
+  mutate(
+    blue_percentage = 100 * `Kamala Harris` / (`Kamala Harris` + `Donald Trump`)
+  ) %>%
+  select(state, blue_percentage)
+
+# Download U.S. state geometries
+us_states <- tigris::states(cb = TRUE, year = 2021) %>%
+  filter(!STUSPS %in% c("PR", "VI", "GU", "MP", "AS")) %>% # Exclude territories
+  select(state = STUSPS, geometry)
+
+# Merge state geometries with single_percent
+map_data <- us_states %>%
+  left_join(single_percent, by = "state")
+
+
+# Plot the fixed map
+ggplot(map_data) +
+  geom_sf(aes(fill = blue_percentage), color = "white", lwd = 0.2) +
+  scale_fill_gradient2(
+    low = "red", mid = "white", high = "blue",
+    midpoint = 50,
+    name = "Kamala Harris Preference (%)"
+  ) +
+  labs(
+    title = "U.S. Map of Preferences for Presidential Candidates",
+    subtitle = "Based on Average Percentages",
+    caption = "Data Source: Polymarket"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank()
+  ) +
+  coord_sf(crs = "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=37.5 +lon_0=-96") # Albers projection
+
+```
+
 
 **Dataset 2: Poll Data**
 
@@ -297,6 +366,52 @@ polling_bystate <- polling2024 %>%
 polling_bystate
 ```
 Things to think about - again, we have no missing values, so there are no missing values throughout this entire dataset. This gives us a good idea for around where the range hovers (i.e. there was no clear winner), which gives evidence that this is an interesting question (since if there was an obvious winner, the additional granularity of the betting data might be useless because the answer is so obvious.) It might be interesting that the range of the the highs is actually lower than the lows, but the standard deviations are all relatively similar. Looking by state also gives us some interesting information! 
+
+
+Okay. now to start making visualizations!! 
+
+```{r}
+#preliminary wrangling
+results <- read.csv("data/actual_results_data/state_results_2024.csv")
+
+results <- results %>% 
+  mutate(trump_win = case_when(Trump_Votes > Harris_Votes ~ 1, 
+                                Trump_Votes < Harris_Votes ~ 0))
+
+polling_bystate_rshape <- polling_bystate %>% 
+  select(state, candidate, mean) %>% 
+  pivot_wider(names_from = candidate, values_from = mean) %>%
+  mutate(pred_twin = case_when(Trump > Harris ~ 1, 
+                               Trump < Harris ~ 0))
+
+state_polls <- filter(polling_bystate, candidate == "Trump")
+#below has a few NAs because of missing cd2s in nebraska, maine, and national reuslt
+polling_bystate_tr <- left_join(polling_bystate_rshape, results, by = c("state" = "State"))
+
+matched_results <- mutate(polling_bystate_tr,
+                          match = case_when(trump_win == pred_twin ~ 1, 
+                                            trump_win != pred_twin ~ 0), 
+                          state = tolower(state))
+```
+
+```{r}
+library(maps)
+us_states <- map_data("state")
+
+us_states <- us_states %>%
+  left_join(matched_results, by = c("region" = "state")) %>% 
+  mutate(match = coalesce(match, 2), 
+         match = as.factor(match))
+
+ggplot(us_states, aes(long, lat, group = group, fill = match)) +
+  geom_polygon(color = "white") +  # Draw state boundaries
+  scale_fill_manual(
+    values = c("0" = "red", "1" = "blue", "2" = "grey"),
+    name = "Match",  # Legend title
+    labels = c("Wrong", "Right", "NA"))  +
+  labs(title = "Total Poll Accuracy in Predicting Trump Win")
+```
+
 
 
 **Dataset 3: Election Results**
