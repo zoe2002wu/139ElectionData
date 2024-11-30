@@ -86,32 +86,37 @@ results <- read.csv("data/actual_results_data/state_results_2024.csv")
 results <- results %>%
 mutate(trump_win = case_when(Trump_Votes > Harris_Votes ~ 1,
 Trump_Votes < Harris_Votes ~ 0))
+
+results <- results %>%
+mutate(
+percent_harris = (Harris_Votes / (Harris_Votes + Trump_Votes)) * 100,
+percent_trump = (Trump_Votes / (Harris_Votes + Trump_Votes)) * 100
+)
 ```
 
 
 ```{r}
 colnames(final_data)[colnames(final_data) == "state"] <- "State"
-# Convert abbreviations to full names
 final_data$State <- state.name[match(final_data$State, state.abb)]
 final_data <- left_join(final_data, results, by = "State")
 ```
 
 ```{r}
 library(tidyverse)
-reshaped_data <- final_data %>%
+betting_data <- final_data %>%
   pivot_wider(
     names_from = candidate, 
-    values_from = average_percentage, 
+    values_from = percentage, 
     names_prefix = "percentage_"
   )
 
-colnames(reshaped_data) <- gsub(" ", "_", colnames(reshaped_data))
+colnames(betting_data) <- gsub(" ", "_", colnames(betting_data))
 
-head(reshaped_data)
+head(betting_data)
 ```
 
 ```{r}
-betting_model <- lm(trump_win ~ `percentage_Donald_Trump` + `percentage_Kamala_Harris`, data = reshaped_data)
+betting_model <- lm(trump_win ~ `percentage_Donald_Trump` + `percentage_Kamala_Harris`, data = betting_data)
 summary(betting_model)
 ```
 
@@ -123,8 +128,81 @@ filter(cycle == 2024) %>%
 select(- pct_trend_adjusted)
 ```
 
-fjndj
+```{r}
+polling_bystate <- polling2024 %>%
+filter(candidate == "Trump" | candidate == "Harris") %>%
+group_by(state, candidate) %>%
+summarize(mean = mean(pct_estimate),
+median = median(pct_estimate),
+sd = sd(pct_estimate),
+iqr = IQR(pct_estimate))
+```
 
+
+
+```{r}
+polls_data <- polling_bystate %>%
+  pivot_wider(
+    names_from = candidate,
+    values_from = c(median, sd, iqr, mean) 
+  )
+
+head(polls_data)
+```
+
+```{r}
+colnames(polls_data)[colnames(polls_data) == "state"] <- "State"
+polls_data <- left_join(polls_data, results, by = "State")
+
+polling_model <- lm(trump_win ~ mean_Harris + mean_Trump, data = polls_data)
+
+summary(polling_model)
+```
+
+```{r}
+betting_data$predictions <- predict(betting_model, betting_data)
+
+polls_data$predictions <- predict(polling_model, polls_data)
+```
+
+
+```{r}
+evaluate_linear_model <- function(data, predictions_col, actual_col) {
+  mse <- mean((data[[predictions_col]] - data[[actual_col]])^2)
+  r2 <- cor(data[[predictions_col]], data[[actual_col]])^2
+  
+  list(MSE = mse, R2 = r2)
+}
+
+polls_data <- polls_data %>%
+  filter(!is.na(predictions) & !is.na(trump_win))
+
+
+betting_metrics <- evaluate_linear_model(betting_data, "predictions", "trump_win")
+poll_metrics <- evaluate_linear_model(polls_data, "predictions", "trump_win")
+
+# Print Metrics
+cat("Betting Model Metrics:\n")
+print(betting_metrics)
+
+cat("\nPoll Model Metrics:\n")
+print(poll_metrics)
+
+```
+
+
+```{r}
+ggplot(betting_data, aes(x = predictions, y = percent_trump)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(title = "Betting Model Predictions vs Actual", x = "Predicted Probability", y = "Actual Outcome")
+
+ggplot(polls_data, aes(x = predictions, y = percent_trump)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(title = "Poll Model Predictions vs Actual", x = "Predicted Probability", y = "Actual Outcome")
+
+```
 
 
 
