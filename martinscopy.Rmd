@@ -8,130 +8,114 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
-#folder path for csv_month
-file_path <- "project_data/betting_data/polymarket/csv_month"
 
-#list all files in the csv_month directory
+#Access csv files in directory
+file_path <- "data/betting_data/polymarket/csv_month/"
+
 file_list <- list.files(path = file_path, pattern = "*.csv", full.names = TRUE)
 
-
-monthly_data <- data.frame()
+# Data frames to store results
+final_data <- data.frame()
 
 for (file in file_list) {
   state_data <- read_csv(file, show_col_types = FALSE)
   
-  #extract state abbreviation
+  # Extract the state abbreviation from the file name
   state_abbrev <- tools::file_path_sans_ext(basename(file)) %>% 
-    stringr::str_replace("_monthly", "")
+    stringr::str_extract("^[A-Z]{2}")
   
-  #add state column
-  state_data <- state_data %>%
-    mutate(
-      state = state_abbrev,
-      `Date (UTC)` = as.Date(`Date (UTC)`, format = "%m-%d-%Y")
-    )
+  # Calculate averages for  Trump and Harris
+  avg_trump <- mean(state_data$`Donald Trump`, na.rm = TRUE)
+  avg_harris <- mean(state_data$`Kamala Harris`, na.rm = TRUE)
   
+  # Create a new data structure for average percentages
+  state_results <- data.frame(
+    candidate = c("Donald Trump", "Kamala Harris"),
+    percentage = c(avg_trump, avg_harris),
+    state = c(state_abbrev, state_abbrev)
+  )
   
-  monthly_data <- bind_rows(monthly_data, state_data)
+  final_data <- bind_rows(final_data, state_results)
 }
 
+# Calculate nationwide statistics
+nationwide_stats <- final_data %>%
+  group_by(candidate) %>%
+  summarise(
+    nationwide_mean = mean(percentage, na.rm = TRUE),
+    nationwide_sd = sd(percentage, na.rm = TRUE)
+  )
+
+
+print(nationwide_stats)
 
 ```
 
 First to analyze poularity within each state we make a heat map for each state depicting the division of the state for each candidate:
+```{r}
+install.packages("sf")
+install.packages("maps")
+install.packages("tigris")
+```
+```{r}
+# Calculate the blue percentage (Kamala Harris's share of the total percentage)
+single_percent <- final_data %>%
+  filter(candidate %in% c("Kamala Harris", "Donald Trump")) %>% # Keep only relevant candidates
+  pivot_wider(names_from = candidate, values_from = percentage) %>% # Reshape to wide format
+  mutate(
+    blue_percentage = `Kamala Harris` / (`Kamala Harris` + `Donald Trump`) # Calculate ratio
+  ) %>%
+  select(state, blue_percentage) # Keep only state and blue_percentage
+
+# Print result
+print(single_percent)
+```
 
 ```{r}
-#aggregate data for heatmap
-heatmap_data <- monthly_data %>%
-  group_by(state) %>%
-  summarise(
-    Kamala_Harris = mean(`Kamala Harris`, na.rm = TRUE),
-    Donald_Trump = mean(`Donald Trump`, na.rm = TRUE)
-  ) %>%
-  pivot_longer(cols = c(Kamala_Harris, Donald_Trump), names_to = "Candidate", values_to = "Percentage")
+library(sf)
+library(dplyr)
+library(ggplot2)
 
-# Heatmap
-ggplot(heatmap_data, aes(x = state, y = Candidate, fill = Percentage)) +
-  geom_tile(color = "white") +
-  scale_fill_gradient(low = "lightblue", high = "red") +
+# Calculate blue_percentage as a percentage (0 to 100)
+single_percent <- final_data %>%
+  filter(candidate %in% c("Kamala Harris", "Donald Trump")) %>%
+  pivot_wider(names_from = candidate, values_from = percentage) %>%
+  mutate(
+    blue_percentage = 100 * `Kamala Harris` / (`Kamala Harris` + `Donald Trump`)
+  ) %>%
+  select(state, blue_percentage)
+
+# Download U.S. state geometries
+us_states <- tigris::states(cb = TRUE, year = 2021) %>%
+  filter(!STUSPS %in% c("PR", "VI", "GU", "MP", "AS")) %>% # Exclude territories
+  select(state = STUSPS, geometry)
+
+# Merge state geometries with single_percent
+map_data <- us_states %>%
+  left_join(single_percent, by = "state")
+
+
+# Plot the fixed map
+ggplot(map_data) +
+  geom_sf(aes(fill = blue_percentage), color = "white", lwd = 0.2) +
+  scale_fill_gradient2(
+    low = "red", mid = "white", high = "blue",
+    midpoint = 50,
+    name = "Kamala Harris Preference (%)"
+  ) +
   labs(
-    title = "Heatmap of Average Candidate Percentages by State",
-    x = "State",
-    y = "Candidate",
-    fill = "Average Percentage"
+    title = "U.S. Map of Preferences for Presidential Candidates",
+    subtitle = "Based on Average Percentages",
+    caption = "Data Source: Polymarket"
   ) +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-
-```
-
-We see from the above heatmap that our polymarket data identifies 7 true "swing" states in: WI, PA, AZ, GA, MI, MN, NV. Analyzing these states closely using trend lines for each month we can see that:
-
-```{r}
-#define crucial states
-crucial_states <- c("GA", "PA", "WI", "MI", "AZ", "NV")
-
-#aggegate trend data by date and state
-trend_data <- monthly_data %>%
-  group_by(`Date (UTC)`, state) %>%
-  summarise(
-    Kamala_Harris = mean(`Kamala Harris`, na.rm = TRUE),
-    Donald_Trump = mean(`Donald Trump`, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  pivot_longer(cols = c(Kamala_Harris, Donald_Trump), names_to = "Candidate", values_to = "Percentage")
-
-#filter data for swing states
-crucial_trend_data <- trend_data %>%
-  filter(state %in% crucial_states)
-
-#line plots for swing states
-ggplot(crucial_trend_data, aes(x = `Date (UTC)`, y = Percentage, color = Candidate, group = Candidate)) +
-  geom_line(size = 1.2) +
-  geom_point(size = 2) +
-  facet_wrap(~state) +
-  labs(
-    title = "Candidate Trends Over Time in Crucial States",
-    x = "Date",
-    y = "Percentage",
-    color = "Candidate"
+  theme(
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank()
   ) +
-  theme_minimal()
-
-
-```
-
-
-As seen above the favorite for presidency flipped over the months in the majority of these states, however, a crucial observation is that Polymarket consistently projected Donald Trump as the favorite in Georgia. This is contrary to many news outlets(maybe analyze this using the poll data and see if the polls suggest the same?) which reported that GA was a highly volatile swing state.\\
-
-One interesting thing to observe is that all of our trend lines in each swing state have significant spikes in Trumps favor in July. As we know, July is the month in which there was an assassination attempt on Donald Trump after which a very patriotic moment and picture was captured of him bumping his fist in the air. We see that the Polymarket data reflects that this moment(likely and picture led to a significant increase in favorability within all of the swing states
- 
-Analyzing our data for the swing states further we see that:
-
-
-
-```{r}
-# Filter data for crucial states
-crucial_monthly_data <- monthly_data %>%
-  filter(state %in% crucial_states)
-
-#boxplot for swing states
-ggplot(crucial_monthly_data, aes(x = state, y = `Kamala Harris`, fill = "Kamala Harris")) +
-  geom_boxplot(alpha = 0.7) +
-  geom_boxplot(aes(y = `Donald Trump`, fill = "Donald Trump"), alpha = 0.5) +
-  labs(
-    title = "Distribution of Candidate Percentages in Crucial States",
-    x = "State",
-    y = "Percentage",
-    fill = "Candidate"
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  coord_sf(crs = "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=37.5 +lon_0=-96") # Albers projection
 
 ```
 
-Where the variability in candidate support provides key insights into the dynamics of the swing states. Donald Trump showed consistent and strong support in Arizona and Georgia, with medians around 60% and relatively narrow variability, while Kamala Harris trailed with medians near 40%. This is inverse with what we see in Michigan where Harris had consistent support of 60% and low variability.\\
-
-We see that in Nevada, support is more variable, but Harris has a slight edge with a median of 55%, compared to Trump’s 50%. Crucially, we see that our Polymarket data is telling us that the the crucial battleground ground states were Pennsylvania and Wisconsin as Harris only led narrowly in both states (medians around 55–60%), yet there is a big overlap in variability. This is very consitent with what we saw in our trend line plots.
 
