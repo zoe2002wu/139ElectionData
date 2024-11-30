@@ -1,0 +1,130 @@
+```{r}
+
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(caret)
+library(readr)
+```
+
+```{r}
+
+#Access csv files in directory
+file_path <- "data/betting_data/polymarket/csv_month/"
+
+file_list <- list.files(path = file_path, pattern = "*.csv", full.names = TRUE)
+
+# Data frames to store results
+final_data <- data.frame()
+missing_data_summary <- data.frame()
+
+for (file in file_list) {
+  state_data <- read_csv(file, show_col_types = FALSE)
+  
+  # Extract the state abbreviation from the file name
+  state_abbrev <- tools::file_path_sans_ext(basename(file)) %>% 
+    stringr::str_extract("^[A-Z]{2}")
+  
+  # Calculate averages for  Trump and Harris
+  avg_trump <- mean(state_data$`Donald Trump`, na.rm = TRUE)
+  avg_harris <- mean(state_data$`Kamala Harris`, na.rm = TRUE)
+  
+  # Count missing and non-missing observations for each candidate
+  non_missing_trump <- sum(!is.na(state_data$`Donald Trump`))
+  missing_trump <- sum(is.na(state_data$`Donald Trump`))
+  non_missing_harris <- sum(!is.na(state_data$`Kamala Harris`))
+  missing_harris <- sum(is.na(state_data$`Kamala Harris`))
+  
+  # Append missing data summary for this state
+  missing_data_summary <- bind_rows(
+    missing_data_summary,
+    data.frame(
+      state = state_abbrev,
+      candidate = "Donald Trump",
+      non_missing = non_missing_trump,
+      missing = missing_trump
+    ),
+    data.frame(
+      state = state_abbrev,
+      candidate = "Kamala Harris",
+      non_missing = non_missing_harris,
+      missing = missing_harris
+    )
+  )
+  
+  # Create a new data structure for average percentages
+  state_results <- data.frame(
+    candidate = c("Donald Trump", "Kamala Harris"),
+    percentage = c(avg_trump, avg_harris),
+    state = c(state_abbrev, state_abbrev)
+  )
+  
+  final_data <- bind_rows(final_data, state_results)
+}
+
+# Calculate nationwide statistics
+nationwide_stats <- final_data %>%
+  group_by(candidate) %>%
+  summarise(
+    nationwide_mean = mean(percentage, na.rm = TRUE),
+    nationwide_sd = sd(percentage, na.rm = TRUE),
+    total_non_missing = sum(!is.na(percentage)),
+    total_missing = sum(is.na(percentage))
+  )
+
+print(missing_data_summary)
+
+print(nationwide_stats)
+
+```
+
+
+```{r}
+results <- read.csv("data/actual_results_data/state_results_2024.csv")
+results <- results %>%
+mutate(trump_win = case_when(Trump_Votes > Harris_Votes ~ 1,
+Trump_Votes < Harris_Votes ~ 0))
+```
+
+
+```{r}
+colnames(final_data)[colnames(final_data) == "state"] <- "State"
+# Convert abbreviations to full names
+final_data$State <- state.name[match(final_data$State, state.abb)]
+final_data <- left_join(final_data, results, by = "State")
+```
+
+```{r}
+library(tidyverse)
+reshaped_data <- final_data %>%
+  pivot_wider(
+    names_from = candidate, 
+    values_from = average_percentage, 
+    names_prefix = "percentage_"
+  )
+
+colnames(reshaped_data) <- gsub(" ", "_", colnames(reshaped_data))
+
+head(reshaped_data)
+```
+
+```{r}
+betting_model <- lm(trump_win ~ `percentage_Donald_Trump` + `percentage_Kamala_Harris`, data = reshaped_data)
+summary(betting_model)
+```
+
+```{r}
+polling_data <- read.csv("data/polls_data/538_data/polls_average_2024.csv")
+polling2024 <- polling_data %>%
+filter(cycle == 2024) %>%
+#take out the pct_trend_adjusted column (it's NA everywhere)
+select(- pct_trend_adjusted)
+```
+
+fjndj
+
+
+
+
