@@ -35,8 +35,10 @@ Make sure I add you as a collaborator.
 
 ## 4. Git config
 1. Find terminal on posit cloud and type in
+```bash
 git config --global user.email "you@example.com"
 git config --global user.name "user_name"
+```
 Replace your email and name with your credentials
 
 ---
