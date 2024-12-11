@@ -46,13 +46,6 @@ First non-missing and missing observations were quantified for each probability 
 
 
 ```{r}
-install.packages("readr")
-install.packages("dplyr")
-install.packages("ggplot2")
-install.packages("caret")
-```
-
-```{r}
 # Load necessary libraries
 library(readr)
 library(dplyr)
@@ -174,11 +167,6 @@ for (file in file_list) {
 
 We have no missing data in the csv files for each state, suggesting this dataset is good to go.
 
-```{r}
-install.packages("sf")
-install.packages("maps")
-install.packages("tigris")
-```
 
 ```{r}
 # Calculate the blue percentage (Kamala Harris's share of the total percentage)
@@ -192,6 +180,10 @@ single_percent <- final_data %>%
 
 # Print result
 print(single_percent)
+```
+
+```{r}
+final_data
 ```
 
 ```{r}
@@ -245,6 +237,7 @@ ggplot(map_data) +
 **Dataset 2: Poll Data**
 
 The dataset contains average polling data by candidate, date, and their adjusted percentage of being favored. We started out by exploring how many missing and non-missing data point there were for Harris and Trump. We then aggregated data over time, such that we are left with poll percentages for Harris/Trump per state. We take the mean to find the average poll percentage for Harris and Trump nationwide. We then take the standard deviation.
+
 
 
 ```{r}
@@ -406,12 +399,56 @@ us_states <- us_states %>%
 ggplot(us_states, aes(long, lat, group = group, fill = match)) +
   geom_polygon(color = "white") +  # Draw state boundaries
   scale_fill_manual(
-    values = c("0" = "red", "1" = "blue", "2" = "grey"),
+    values = c("0" = "green", "1" = "orange", "2" = "grey"),
     name = "Match",  # Legend title
     labels = c("Wrong", "Right", "NA"))  +
   labs(title = "Total Poll Accuracy in Predicting Trump Win")
 ```
 
+
+```{r}
+polling_bystate
+```
+
+```{r}
+
+blue_data <- polling_bystate %>%
+  filter(candidate == "Harris") %>%
+  select(state, blue_favorability_percentage = "mean")
+
+
+single_percent
+# Download U.S. state geometries
+us_states <- tigris::states(cb = TRUE, year = 2021) %>%
+  filter(!STUSPS %in% c("PR", "VI", "GU", "MP", "AS")) %>% # Exclude territories
+  select(state = STUSPS, geometry)
+
+# Merge state geometries with single_percent
+map_data <- us_states %>%
+  left_join(single_percent, by = "state")
+
+
+# Plot the fixed map
+ggplot(map_data) +
+  geom_sf(aes(fill = blue_percentage), color = "white", lwd = 0.2) +
+  scale_fill_gradient2(
+    low = "red", mid = "white", high = "blue",
+    midpoint = 50,
+    name = "Kamala Harris Preference (%)"
+  ) +
+  labs(
+    title = "U.S. Map of Preferences for Presidential Candidates",
+    subtitle = "Based on Average Percentages",
+    caption = "Data Source: Polymarket"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank()
+  ) +
+  coord_sf(crs = "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=37.5 +lon_0=-96") # Albers projection
+```
 
 
 **Dataset 3: Election Results**
@@ -453,6 +490,273 @@ stats_summary <- actual_results %>%
 #print(stats_summary)
 ```
 This dataset does not contain any missing data. 
+
+**Time-based Comparsion of Three Datasets**
+
+Dataset1
+
+```{r}
+
+# Access csv files in directory
+file_path <- "data/betting_data/polymarket/csv_day/"
+
+file_list <- list.files(path = file_path, pattern = "*.csv", full.names = TRUE)
+
+# Data frames to store results
+betting_data <- data.frame()
+missing_data_summary <- data.frame()
+
+for (file in file_list) {
+  state_data <- read_csv(file, show_col_types = FALSE)
+  state_data$`Date (UTC)` <- as.POSIXct(state_data$`Date (UTC)`, format = "%m-%d-%Y")  # For dates with timestamps
+
+  # Extract the state abbreviation from the file name
+  state_abbrev <- tools::file_path_sans_ext(basename(file)) %>% 
+    stringr::str_extract("^[A-Z]{2}")
+  
+  # Calculate averages for Trump and Harris grouped by date
+  daily_averages <- state_data %>%
+    group_by(`Date (UTC)`) %>%
+    summarize(
+      avg_trump = mean(`Donald Trump`, na.rm = TRUE),
+      avg_harris = mean(`Kamala Harris`, na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+  # Create a new data structure for average percentages
+  state_results <- daily_averages %>%
+    pivot_longer(
+      cols = starts_with("avg_"),
+      names_to = "candidate",
+      values_to = "percentage"
+    ) %>%
+    mutate(
+      candidate = recode(candidate, "avg_trump" = "Donald Trump", "avg_harris" = "Kamala Harris"),
+      state = state_abbrev
+    ) %>%
+    select(Date = `Date (UTC)`, State = state, Candidate = candidate, Percentage = percentage)
+  
+  # Append to final data
+  betting_data <- bind_rows(betting_data, state_results)
+}
+betting_data$Date <- as.Date(betting_data$Date)
+
+
+betting_data <- betting_data %>%
+  arrange(Date, State)
+
+# Define the date range
+start_date <- as.Date("2024-08-01")
+end_date <- as.Date("2024-11-04")
+
+# Crop the dataset by the date span
+betting_data_cropped <- betting_data %>%
+  filter(Date >= start_date & Date <= end_date)
+
+# Calculate the average percentage across all states for each date and candidate
+average_percentage_over_time <- betting_data_cropped %>%
+  group_by(Date, Candidate) %>%
+  summarize(AveragePercentage = mean(Percentage, na.rm = TRUE), .groups = "drop")
+summary(average_percentage_over_time)
+
+
+average_percentage_over_time
+# Define the lines
+line1 <- 0.499  # Dashed red line
+line2 <- 0.483  # Dotted blue line
+
+# Combine the data with an identifier for the lines
+average_percentage_over_time <- average_percentage_over_time %>%
+  mutate(Line = NA)  # Add a placeholder column for lines (won't affect original plot data)
+
+# Plot the data
+ggplot(average_percentage_over_time, aes(x = Date, y = AveragePercentage, color = Candidate)) +
+  geom_line(size = 1) +
+  geom_hline(aes(yintercept = line1, color = "Election Result (Donald Trump)"), linetype = "dashed", size = 0.5) +
+  geom_hline(aes(yintercept = line2, color = "Election Result (Kamala Harris)"), linetype = "dotted", size = 0.5) +
+  labs(
+    title = "Average Betting Percentage Across All States Over Time",
+    x = "Date (UTC)",
+    y = "Average Percentage",
+    color = "Legend"
+  ) +
+  scale_color_manual(
+    values = c("Donald Trump" = "red", "Kamala Harris" = "blue", 
+               "Election Result (Donald Trump)" = "darkred", "Election Result (Kamala Harris)" = "darkblue")
+  ) +
+  theme_minimal()
+```
+
+Dataset 2
+
+```{r}
+polling_data <- read.csv("data/polls_data/538_data/polls_average_2024.csv")
+
+# Create a lookup table for state names to abbreviations
+state_abbreviation <- setNames(state.abb, state.name)
+
+# Filter and clean the dataset
+polling2024 <- polling_data %>%
+  filter(cycle == 2024) %>%
+  select(-pct_trend_adjusted)  # Remove the NA column
+
+polling2024
+
+# Map candidate names to their full names
+polling2024$candidate <- polling2024$candidate %>%
+  recode(
+    "Trump" = "Donald Trump",
+    "Harris" = "Kamala Harris"
+  )
+
+polling_tidy <- polling2024 %>%
+  filter(candidate %in% c("Donald Trump", "Kamala Harris")) %>%
+  mutate(
+    state = state_abbreviation[state],  # Convert state names to abbreviations
+    date = as.Date(date),               # Ensure date is properly formatted
+    pct_estimate = 0.01*pct_estimate   # Convert percentages to proportion
+  ) %>%
+  filter(!is.na(state)) %>%             # Remove rows with NA in state column
+  select(Date = date, State = state, Candidate = candidate, Percentage = pct_estimate)
+
+polling_tidy <- polling_tidy %>%
+  arrange(Date, State)
+
+# Define the date range
+start_date <- as.Date("2024-08-01")
+end_date <- as.Date("2024-11-04")
+
+# Crop the dataset by the date span
+polling_tidy_cropped <- polling_tidy %>%
+  filter(Date >= start_date & Date <= end_date)
+
+
+polling_tidy_cropped
+
+
+# Calculate the average percentage across all states for each date and candidate
+average_percentage_over_time <- polling_tidy_cropped %>%
+  group_by(Date, Candidate) %>%
+  summarize(AveragePercentage = mean(Percentage, na.rm = TRUE), .groups = "drop")
+summary(average_percentage_over_time)
+
+
+average_percentage_over_time
+# Define the lines
+line1 <- 0.499  # Dashed red line
+line2 <- 0.483  # Dotted blue line
+
+# Combine the data with an identifier for the lines
+average_percentage_over_time <- average_percentage_over_time %>%
+  mutate(Line = NA)  # Add a placeholder column for lines (won't affect original plot data)
+
+
+```
+
+```{r}
+state_abbreviation <- setNames(state.abb, state.name)
+
+actual_results <- read_csv("data/actual_results_data/state_results_2024.csv")
+# Add percentage columns for Harris and Trump
+actual_results <- actual_results %>%
+  mutate(
+    percent_harris = (Harris_Votes / (Harris_Votes + Trump_Votes)) * 100,
+    percent_trump = (Trump_Votes / (Harris_Votes + Trump_Votes)) * 100
+  )
+
+
+# Reshape the dataframe to long format
+actual_results <- actual_results %>%
+  pivot_longer(
+    cols = c(Harris_Votes, Trump_Votes),       # Columns to pivot
+    names_to = "Candidate",                    # New column for candidate names
+    values_to = "Votes"                        # New column for vote counts
+  ) %>%
+  mutate(
+    Candidate = case_when(                    # Adjust candidate names
+      Candidate == "Harris_Votes" ~ "Kamala Harris",
+      Candidate == "Trump_Votes" ~ "Donald Trump"
+    ),
+    Average_Percentage = case_when(                   # Assign percentages
+      Candidate == "Kamala Harris" ~ 0.01*percent_harris,
+      Candidate == "Donald Trump" ~ 1 - 0.01*percent_harris
+    ),
+    State = state_abbreviation[State] 
+  ) %>%
+  
+  select(State, Candidate, Average_Percentage) # Keep desired columns
+
+# View the reshaped data
+print(actual_results)
+```
+```{r}
+# Find the common states
+common_states <- Reduce(intersect, list(betting_data_cropped$State, polling_tidy_cropped$State, actual_results$State))
+
+# Filter both datasets to include only common states
+betting_final <- betting_data_cropped %>%
+  filter(State %in% common_states)
+
+polling_final <- polling_tidy_cropped %>%
+  filter(State %in% common_states)
+
+results_averages <- actual_results %>%
+  filter(State %in% common_states)
+
+# View the filtered datasets
+betting_final
+polling_final
+write_csv(betting_final, "data/filtered_data/betting_averages_time.csv")
+write_csv(polling_final, "data/filtered_data/polling_averages_time.csv")
+
+betting_averages <- betting_final %>%
+  group_by(State, Candidate) %>%
+  summarise(
+    Average_Percentage = mean(Percentage, na.rm = TRUE), # Average percentage
+    .groups = 'drop'                                    # Drop grouping
+  )
+
+betting_averages
+
+
+polling_averages <- polling_final %>% 
+  group_by(State, Candidate) %>%
+  summarise(
+    Average_Percentage = mean(Percentage, na.rm = TRUE), # Average percentage
+    .groups = 'drop'                                    # Drop grouping
+  )
+
+
+betting_averages
+polling_averages
+results_averages
+write_csv(betting_final, "data/filtered_data/betting_avergaes_state.csv")
+write_csv(polling_final, "data/filtered_data/polling_averages_state.csv")
+write_csv(polling_final, "data/filtered_data/results_averages_state.csv")
+
+
+```
+
+
+```{r}
+# Plot the data
+ggplot(average_percentage_over_time, aes(x = Date, y = AveragePercentage, color = Candidate)) +
+  geom_line(size = 1) +
+  geom_hline(aes(yintercept = line1, color = "Election Result (Donald Trump)"), linetype = "dashed", size = 0.5) +
+  geom_hline(aes(yintercept = line2, color = "Election Result (Kamala Harris)"), linetype = "dotted", size = 0.5) +
+  labs(
+    title = "Average Polling Percentage Across All States Over Time",
+    x = "Date (UTC)",
+    y = "Average Percentage",
+    color = "Legend"
+  ) +
+  scale_color_manual(
+    values = c("Donald Trump" = "red", "Kamala Harris" = "blue", 
+               "Election Result (Donald Trump)" = "darkred", "Election Result (Kamala Harris)" = "darkblue")
+  ) +
+  theme_minimal()
+```
+
 
 **Final Thoughts**
 

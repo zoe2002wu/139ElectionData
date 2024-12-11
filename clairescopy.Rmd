@@ -49,13 +49,11 @@ The dataset provides separate files for each state, containing the probability o
 
 <<<<<<< HEAD
 - **Organization**: The dataset contains polling data categorized by pollster, state, and candidate.
-- **Processing**: ...
->>>>>>> 6331ec501b2ae001a1eea077858e6dd98ebf45fc
-=======
+- **Processing**: 
 The dataset contains average polling data by candidate, date, and their adjusted percentage of being favored. We started out by exploring how many missing and non-missing data point there were for Harris and Trump. We then aggregated data over time, such that we are left with poll percentages for Harris/Trump per state. We take the mean to find the average poll percentage for Harris and Trump nationwide. We then take the standard deviation.
 
 ```{r}
-polling_data <- read.csv("data/polls_survey_data/538_data/polls_average_2024.csv")
+polling_data <- read.csv("data/polls_data/538_data/polls_average_2024.csv")
 
 library(dplyr)
 library(tidyverse)
@@ -217,9 +215,9 @@ us_states <- us_states %>%
          match = as.factor(match))
 
 ggplot(us_states, aes(long, lat, group = group, fill = match)) +
-  geom_polygon(color = "black") +  # Draw state boundaries
+  geom_polygon(color = "white") +  # Draw state boundaries
   scale_fill_manual(
-    values = c("0" = "red", "1" = "green", "2" = "grey"),
+    values = c("0" = "red", "1" = "blue", "2" = "grey"),
     name = "Match",  # Legend title
     labels = c("Wrong", "Right", "NA"))  +
   labs(title = "Total Poll Accuracy in Predicting Trump Win")

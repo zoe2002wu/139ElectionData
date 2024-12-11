@@ -1,0 +1,56 @@
+
+The key column names that we'll be working with in this dataset include:
+1. start_date: 11/3/2024
+2. end_date
+3. state: full spelling e.g. Alaska
+4. answer: either under Harris or Trump
+5. pct: percentage who polled for that candidate
+
+We average across all percentage values for a state that favor Harris/Trump
+
+```{r}
+library(dplyr)
+
+file_path <- "data/polls_data/538_data/polls_raw.csv"
+
+polls_data <- read_csv(file_path, show_col_types = FALSE)
+
+state_abbreviation <- setNames(state.abb, state.name)
+
+polling_tidy <- polls_data %>%
+  filter(answer %in% c("Trump", "Harris")) %>%
+  mutate(
+    answer = case_when(
+      answer == "Trump" ~ "Donald Trump",
+      answer == "Harris" ~ "Kamala Harris",
+      TRUE ~ answer
+    ),
+    state = state_abbreviation[state],               # Convert state names to abbreviations
+    date = as.Date(start_date, format = "%m/%d/%y"), # Convert date to standard format
+    pct = pct * 0.01                                 # Convert percentages to proportion
+  ) %>%
+  filter(!is.na(state)) %>%                          # Remove rows with NA in state column
+  select(Date = date, State = state, Candidate = answer, Percentage = pct)
+
+polling_averages <- polling_tidy %>%
+  group_by(Date) %>%
+  summarise(
+    Average_Percentage = mean(Percentage, na.rm = TRUE), # Average percentage
+    .groups = 'drop'                                    # Drop grouping
+  )
+
+polling_tidy <- polling_tidy %>%
+  arrange(Date, State)
+
+# Define the date range
+start_date <- as.Date("2024-08-01")
+end_date <- as.Date("2024-11-04")
+
+# Crop the dataset by the date span
+polling_tidy_cropped <- polling_tidy %>%
+  filter(Date >= start_date & Date <= end_date)
+
+# View the resulting cropped data
+polling_tidy_cropped
+
+```
