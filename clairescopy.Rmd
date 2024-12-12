@@ -230,6 +230,24 @@ ggplot(us_states, aes(long, lat, group = group, fill = match)) +
 
 ```
 
+```{r}
+#looking at overall trends over time 
+polling2024_th <- polling2024 %>% 
+  mutate(date = as.POSIXct(polling2024$date, format = "%Y-%m-%d"))  %>% 
+  filter(candidate == "Trump" | candidate == "Harris") %>%
+  filter(state %in% c("Arizona", "Georgia", "Michigan", "Nevada", "Pennsylvania", "Wisconsin")) %>% 
+  filter(date > as.POSIXct("2024-07-21") & date < as.POSIXct("2024-11-05") )
+
+
+ggplot(polling2024_th, aes(x = date, y = pct_estimate, color = candidate)) +
+  geom_line() + 
+  facet_wrap(~state) + 
+  labs(title = "Polling Over Time by State and Candidate",
+       x = "Date", y = "Percentage Estimate") + 
+  scale_color_manual(values = c("Trump" = "red", "Harris" = "blue")) # Custom colors
+
+```
+
 **Dataset 3: Election Results**
 
 The dataset contains the number of votes for Harris and Trump, separated by state. We find the percentage who voted for Harris and Trump, the amount of missing and non-missing data, and the mean and variance. 
