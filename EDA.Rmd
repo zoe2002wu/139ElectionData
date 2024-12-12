@@ -730,9 +730,9 @@ polling_averages <- polling_final %>%
 betting_averages
 polling_averages
 results_averages
-write_csv(betting_final, "data/filtered_data/betting_avergaes_state.csv")
-write_csv(polling_final, "data/filtered_data/polling_averages_state.csv")
-write_csv(polling_final, "data/filtered_data/results_averages_state.csv")
+write_csv(betting_averages, "data/filtered_data/betting_avergaes_state.csv")
+write_csv(polling_averages, "data/filtered_data/polling_averages_state.csv")
+write_csv(results_averages, "data/filtered_data/results_averages_state.csv")
 
 
 ```
