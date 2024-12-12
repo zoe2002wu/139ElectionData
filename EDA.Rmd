@@ -730,9 +730,42 @@ polling_averages <- polling_final %>%
 betting_averages
 polling_averages
 results_averages
-write_csv(betting_final, "data/filtered_data/betting_avergaes_state.csv")
-write_csv(polling_final, "data/filtered_data/polling_averages_state.csv")
-write_csv(polling_final, "data/filtered_data/results_averages_state.csv")
+write_csv(betting_averages, "data/filtered_data/betting_avergaes_state.csv")
+write_csv(polling_averages, "data/filtered_data/polling_averages_state.csv")
+write_csv(results_averages, "data/filtered_data/results_averages_state.csv")
+
+
+```
+
+```{r}
+
+# Load the data
+betting_averages <- read_csv("data/filtered_data/betting_avergaes_state.csv")
+polling_averages <- read_csv("data/filtered_data/polling_averages_state.csv")
+results_averages <- read_csv("data/filtered_data/results_averages_state.csv")
+
+# Transform betting data
+betting_transformed <- betting_averages %>%
+  pivot_wider(names_from = Candidate, values_from = Average_Percentage, 
+              names_prefix = "Bet_pct_")
+
+# Transform polling data
+polling_transformed <- polling_averages %>%
+  pivot_wider(names_from = Candidate, values_from = Average_Percentage, 
+              names_prefix = "Poll_pct_")
+
+# Transform results data
+results_transformed <- results_averages %>%
+  pivot_wider(names_from = Candidate, values_from = Average_Percentage, 
+              names_prefix = "Results_pct_")
+
+# Combine all transformed datasets
+final_data <- betting_transformed %>%
+  full_join(polling_transformed, by = "State") %>%
+  full_join(results_transformed, by = "State")
+
+# Write the final data to a CSV file
+write_csv(final_data, "data/filtered_data/final_combined_data.csv")
 
 
 ```
