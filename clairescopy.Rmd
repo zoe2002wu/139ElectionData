@@ -367,7 +367,7 @@ model <- lm(data = combined, Results_pct_Donald.Trump ~
 
 best.sub <- ols_step_best_subset(model)
 
-print(best.sub)
+best.sub$metrics[, c("predictors", "adjr", "aic", "sbic")]
 
 #model selection - combined sequential
 
@@ -378,6 +378,13 @@ stepwisemodel = step(interceptmodel,
                      direction = "both", trace = 0)
 
 formula(stepwisemodel)
+
+stepwisemodel_aic = step(interceptmodel, 
+                     scope = list(lower = formula(interceptmodel), 
+                                  upper = formula(model)), 
+                     direction = "both", trace = 0, k = 2)
+
+formula(stepwisemodel_aic)
 ```
 Both the above agree that poll pct + log_bet_trump is the best one? 
 
