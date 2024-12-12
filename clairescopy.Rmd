@@ -281,6 +281,112 @@ combined <- left_join(betting_time1, polling_time1, by = c("Date", "State"))
 #                                 Trump_Votes < Harris_Votes ~ 0))
 
 ```
+
+
+```{r}
+combined <- read.csv("data/filtered_data/final_combined_data.csv")
+install.packages("car")
+library(car)
+
+```
+
+```{r}
+#visualizations???
+
+ggplot(combined, aes(y = Results_pct_Donald.Trump, x = Bet_pct_Donald.Trump)) +
+  geom_point()
+
+ggplot(combined, aes(y = Results_pct_Donald.Trump, x = Poll_pct_Donald.Trump)) +
+  geom_point()
+
+ggplot(combined, aes(x = Bet_pct_Donald.Trump, y = Poll_pct_Donald.Trump)) + 
+  geom_point()
+```
+
+```{r}
+base_model_trump <- lm(data = combined, Results_pct_Donald.Trump ~ Bet_pct_Donald.Trump + Poll_pct_Donald.Trump)
+
+base_model_harris <- lm(data = combined, Results_pct_Kamala.Harris ~ Bet_pct_Kamala.Harris + Poll_pct_Kamala.Harris)
+
+summary(base_model_trump)
+AIC(base_model_trump)
+
+summary(base_model_harris)
+```
+
+
+```{r}
+
+#trying some transformations 
+
+combined <- combined %>% 
+  mutate(log_bet_trump = log(Bet_pct_Donald.Trump), 
+         log_bet_harris = log(Bet_pct_Kamala.Harris), 
+         logit_bet_trump = logit(Bet_pct_Donald.Trump), 
+         logit_bet_harris = logit(Bet_pct_Kamala.Harris))
+
+ggplot(combined, aes(x = log_bet_trump, y = Results_pct_Donald.Trump)) +
+  geom_point()
+
+ggplot(combined, aes(x = logit_bet_trump, y = Results_pct_Donald.Trump)) +
+  geom_point()
+```
+```{r}
+#new models with those transformations
+
+lm_trump_betlogit <- lm(data = combined, Results_pct_Donald.Trump ~ logit_bet_trump + Poll_pct_Donald.Trump)
+
+
+summary(lm_trump_betlogit)
+
+lm_trump_bet <- lm(data = combined, Results_pct_Donald.Trump ~
+                     Bet_pct_Donald.Trump)
+lm_trump_bet_logit <- lm(data = combined, Results_pct_Donald.Trump ~
+                           logit_bet_trump)
+
+summary(lm_trump_bet)
+AIC(lm_trump_bet)
+
+
+summary(lm_trump_bet_logit)
+AIC(lm_trump_bet_logit)
+
+
+```
+```{r}
+install.packages(olsrr)
+library(olsrr)
+```
+
+
+```{r}
+#model selection process - best subset 
+model <- lm(data = combined, Results_pct_Donald.Trump ~ 
+              Poll_pct_Donald.Trump + Bet_pct_Donald.Trump
+            + log_bet_trump + logit_bet_trump)
+
+best.sub <- ols_step_best_subset(model)
+
+print(best.sub)
+
+#model selection - combined sequential
+
+interceptmodel <- lm(Results_pct_Donald.Trump ~  1, data = combined)
+stepwisemodel = step(interceptmodel, 
+                     scope = list(lower = formula(interceptmodel), 
+                                  upper = formula(model)), 
+                     direction = "both", trace = 0)
+
+formula(stepwisemodel)
+```
+Both the above agree that poll pct + log_bet_trump is the best one? 
+
+```{r}
+#with interactions?
+
+
+
+```
 **Dataset 3: Election Results**
 
 The dataset contains the number of votes for Harris and Trump, separated by state. We find the percentage who voted for Harris and Trump, the amount of missing and non-missing data, and the mean and variance. 
