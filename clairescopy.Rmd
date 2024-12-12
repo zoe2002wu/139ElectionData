@@ -248,6 +248,39 @@ ggplot(polling2024_th, aes(x = date, y = pct_estimate, color = candidate)) +
 
 ```
 
+
+okay time for some linear model making,,,,, focus on data transformations and stuff
+
+```{r}
+betting_time <- read.csv("data/filtered_data/betting_averages_time.csv")
+polling_state <- read.csv("data/filtered_data/polling_averages_state.csv")
+polling_time <- read.csv("data/filtered_data/polling_averages_time.csv")
+results_state <- read.csv("data/filtered_data/results_averages_state.csv")
+
+```
+
+```{r}
+#combining into one table?
+
+betting_time1 <- betting_time %>%
+  pivot_wider(names_from = Candidate, values_from = Percentage) %>%
+  rename("bet_pct_trump" = "Donald Trump", "bet_pct_harris"= "Kamala Harris")
+
+
+polling_time1 <- polling_time %>%
+  pivot_wider(names_from = Candidate, values_from = Percentage) %>%
+  rename("poll_pct_trump" = "Donald Trump", "poll_pct_harris"= "Kamala Harris")
+
+combined <- left_join(betting_time1, polling_time1, by = c("Date", "State"))
+
+
+# results_state1 <- results_state %>% 
+#   pivot_wider(names_from = Candidate, values_from = Percentage) %>%
+#   rename("bet_pct_trump" = "Donald Trump", "bet_pct_harris"= "Kamala Harris")
+#   mutate("trump_win" = case_when(Donald Trump > Kamala HAr ~ 1, 
+#                                 Trump_Votes < Harris_Votes ~ 0))
+
+```
 **Dataset 3: Election Results**
 
 The dataset contains the number of votes for Harris and Trump, separated by state. We find the percentage who voted for Harris and Trump, the amount of missing and non-missing data, and the mean and variance. 
