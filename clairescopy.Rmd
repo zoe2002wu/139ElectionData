@@ -383,10 +383,19 @@ Both the above agree that poll pct + log_bet_trump is the best one?
 
 ```{r}
 #with interactions?
+interactionmodel <- lm(Results_pct_Donald.Trump ~  
+                         (Poll_pct_Donald.Trump + Bet_pct_Donald.Trump
+            + log_bet_trump + logit_bet_trump)^2, data = combined)
 
+stepwisemodel_int = step(interceptmodel, 
+                     scope = list(lower = formula(interceptmodel), 
+                                  upper = formula(interactionmodel)), 
+                     direction = "both", trace = 0)
 
-
+formula(stepwisemodel_int)
 ```
+^^ i.e. interaction terms are not useful here? 
+
 **Dataset 3: Election Results**
 
 The dataset contains the number of votes for Harris and Trump, separated by state. We find the percentage who voted for Harris and Trump, the amount of missing and non-missing data, and the mean and variance. 
