@@ -1,5 +1,4 @@
 ```{r}
-
 ```
 
 ```{r}
@@ -80,7 +79,6 @@ print(nationwide_stats)
 
 ```
 
-
 ```{r}
 results <- read.csv("data/actual_results_data/state_results_2024.csv")
 results <- results %>%
@@ -118,6 +116,7 @@ head(betting_data)
 ```{r}
 betting_model <- lm(trump_win ~ `percentage_Donald_Trump` + `percentage_Kamala_Harris`, data = betting_data)
 summary(betting_model)
+
 ```
 
 ```{r}
@@ -202,6 +201,189 @@ ggplot(polls_data, aes(x = predictions, y = percent_trump)) +
   labs(title = "Poll Model Predictions vs Actual", x = "Predicted Probability", y = "Actual Outcome")
 
 ```
+
+```{r}
+combined_data <- results %>%
+  left_join(polls_data, by = c("State" = "State")) %>%
+  left_join(betting_data, by = "State") %>%
+   #Log transformation
+  mutate(
+    log_trump_betting = log(percentage_Donald_Trump + 1),
+    log_harris_betting = log(percentage_Kamala_Harris + 1)
+  ) %>%
+  na.omit()
+
+model3 <- lm(trump_win ~ mean_Trump + mean_Harris +
+               log_trump_betting + log_harris_betting, 
+               data = combined_data)
+X <- model.matrix(trump_win ~ mean_Trump + mean_Harris + 
+                  log_trump_betting + log_harris_betting, 
+                  data = combined_data)[, -1]
+y <- combined_data$trump_win
+
+summary(model3)
+```
+
+
+```{r}
+set.seed(139)
+
+library(glmnet)
+
+ridge_cv <- cv.glmnet(X, y, alpha = 0)
+
+lasso_cv <- cv.glmnet(X, y, alpha = 1, lambda=10^seq(-5, 5, 0.1))
+
+plot_cv_results <- function(cv_fit, title) {
+  plot(cv_fit)
+  title(main = title)
+}
+
+print(ridge_cv)
+
+print(lasso_cv)
+```
+
+```{r}
+# Ridge
+plot(ridge_cv)
+title("Ridge: Average Validation MSE vs. Lambda")
+ridge_cv$lambda.min
+```
+
+
+```{r}
+# LASSO
+plot(lasso_cv)
+title("LASSO: Average Validation MSE vs. Lambda")
+lasso_cv$lambda.min
+```
+
+```{r}
+```
+
+```{r}
+par(mfrow = c(1,2))
+plot_cv_results(ridge_cv, "Ridge Regression")
+plot_cv_results(lasso_cv, "Lasso Regression")
+
+best_lambda_ridge <- ridge_cv$lambda.min
+best_lambda_lasso <- lasso_cv$lambda.min
+
+ridge_model <- glmnet(X, y, alpha = 0, lambda = best_lambda_ridge, family = "binomial")
+lasso_model <- glmnet(X, y, alpha = 1, lambda = best_lambda_lasso, family = "binomial")
+
+cat("Ridge Regression Coefficients:\n")
+print(coef(ridge_model))
+
+cat("\nLasso Regression Coefficients:\n")
+print(coef(lasso_model))
+```
+
+```{r}
+ predict_and_evaluate <- function(model, X, y, model_name) {
+  y_pred_prob <- predict(model, newx = X, type = "response")
+  y_pred <- ifelse(y_pred_prob > 0.5, 1, 0)
+  
+  conf_matrix <- table(Predicted = y_pred, Actual = y)
+  
+  accuracy <- sum(y_pred == y) / length(y)
+  
+  cat(paste(model_name, "Results:\n"))
+  print(conf_matrix)
+  cat(paste("Accuracy:", round(accuracy, 4), "\n\n"))
+}
+
+predict_and_evaluate(ridge_model, X, y, "Ridge Regression")
+predict_and_evaluate(lasso_model, X, y, "Lasso Regression")
+```
+
+
+```{r}
+library(car)
+combined <- read.csv("data/filtered_data/final_combined_data.csv")
+
+combined <- combined %>% 
+  mutate(log_bet_trump = log(Bet_pct_Donald.Trump), 
+         log_bet_harris = log(Bet_pct_Kamala.Harris), 
+         logit_bet_trump = logit(Bet_pct_Donald.Trump), 
+         logit_bet_harris = logit(Bet_pct_Kamala.Harris))
+```
+
+
+```{r}
+lm_trump_bet_logit <- lm(data = combined, Results_pct_Donald.Trump ~
+                           logit_bet_trump)
+lm_trump_betlog <- lm(data = combined, Results_pct_Donald.Trump ~ Poll_pct_Donald.Trump + log_bet_trump)
+```
+
+```{r}
+y1 <- combined$Results_pct_Donald.Trump
+X1 <- model.matrix(Results_pct_Donald.Trump ~ Poll_pct_Donald.Trump + log_bet_trump, data = combined)[, -1]
+
+set.seed(139) 
+ridge_cv_1 <- cv.glmnet(X1, y1, alpha = 0, nfolds = 10)
+best_lambda_ridge_1 <- ridge_cv_1$lambda.min
+ridge_model_1 <- glmnet(X1, y1, alpha = 0, lambda = best_lambda_ridge_1)
+
+cat("Best Model Ridge Coefficients:\n")
+print(coef(ridge_model_1))
+cat("Best Model Ridge Chosen Lambda:", best_lambda_ridge_1, "\n")
+
+lasso_cv_1 <- cv.glmnet(X1, y1, alpha = 1, nfolds = 10)
+best_lambda_lasso_1 <- lasso_cv_1$lambda.min
+lasso_model_1 <- glmnet(X1, y1, alpha = 1, lambda = best_lambda_lasso_1)
+
+cat("Best Model Lasso Coefficients:\n")
+print(coef(lasso_model_1))
+cat("Best Model Lasso Chosen Lambda:", best_lambda_lasso_1, "\n")
+
+```
+
+```{r}
+plot(ridge_cv_1)
+title("Ridge CV Plot: Best Model")
+
+plot(lasso_cv_1)
+title("Lasso CV Plot: Best Model")
+```
+```{r}
+ridge_fit_1 <- glmnet(X1, y1, alpha = 0)
+plot(ridge_fit_1, xvar = "lambda", label = TRUE)
+title("Ridge Coefficient Paths")
+
+lasso_fit_1 <- glmnet(X1, y1, alpha = 1)
+plot(lasso_fit_1, xvar = "lambda", label = TRUE)
+title("Lasso Coefficient Paths")
+```
+
+```{r}
+ridge_predictions <- predict(ridge_model_1, newx = X1)
+
+plot(y1, ridge_predictions,
+     xlab = "Actual Trump Results",
+     ylab = "Predicted Trump Results (Ridge)",
+     main = "Ridge Predicted vs Actual",
+     pch = 19, col = "blue")
+
+abline(0, 1, col = "red", lwd = 2)
+```
+
+
+```{r}
+y_pred_lasso <- predict(lasso_model_1, newx = X1)
+
+plot(y1, y_pred_lasso, 
+     xlab = "Actual Trump Results", 
+     ylab = "Predicted Trump Results (Lasso)", 
+     main = "Lasso Predicted vs Actual")
+abline(0, 1, col = "red") 
+```
+
+```{r}
+
+```
+
 
 
 
